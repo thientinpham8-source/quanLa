@@ -1,0 +1,120 @@
+/* ===== Quán Lá – base: biến màu, reset, chữ ===== */
+:root {
+  --brand: #0878f9;
+  --brand-600: #0066df;
+  --brand-700: #0759bd;
+  --brand-50: #edf5ff;
+  --brand-100: #cfe3ff;
+  --accent: #d97706;
+  --accent-600: #b45309;
+  --accent-50: #fffbeb;
+  --danger: #dc2626;
+  --danger-50: #fef2f2;
+  --info: #2563eb;
+  --info-50: #eaf1ff;
+
+  --bg: #f8faf9;
+  --surface: #ffffff;
+  --surface-2: #f5f6f7;
+  --line: #e5e7eb;
+  --text: #111827;
+  --muted: #6b7280;
+
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 1px 3px rgba(17, 24, 39, .045);
+  --shadow: 0 4px 14px rgba(17, 24, 39, .07);
+  --shadow-lg: 0 12px 32px rgba(17, 24, 39, .12);
+
+  --header-h: 56px;
+  --nav-h: 62px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+body {
+  margin: 0;
+  font: 14px/1.5 var(--font);
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+h1, h2, h3, h4, p { margin: 0; }
+h1 { font-size: 22px; font-weight: 600; letter-spacing: -.25px; }
+h2 { font-size: 18px; font-weight: 600; letter-spacing: -.15px; }
+h3 { font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
+h3 svg.i { width: 18px; height: 18px; color: var(--muted); }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; padding: 0; }
+button:disabled { cursor: not-allowed; opacity: .5; }
+img, svg { display: block; max-width: 100%; }
+svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 45%, transparent); outline-offset: 2px; }
+::selection { background: var(--brand-100); }
+
+/* Refined type hierarchy and focus treatment */
+.muted { color: var(--muted); }
+strong, b { font-weight: 500; letter-spacing: -.08px; }
+
+/* Tiện ích */
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.xs { font-size: 12px; }
+.bold { font-weight: 600; }
+.right { text-align: right; }
+.center { text-align: center; }
+.nowrap { white-space: nowrap; }
+.num { font-variant-numeric: tabular-nums; }
+.grow { flex: 1; min-width: 0; }
+.row { display: flex; align-items: center; gap: 8px; }
+.row-between { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.stack-sm { display: flex; flex-direction: column; gap: 6px; }
+.wrap { flex-wrap: wrap; }
+.hidden { display: none !important; }
+.ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.text-brand { color: var(--brand); }
+.text-accent { color: var(--accent-600); }
+.text-danger { color: var(--danger); }
+.mt { margin-top: 12px; }
+.mb { margin-bottom: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ===== In máy in nhiệt 80mm ===== */
+#print-area { display: none; }
+@media print {
+  @page { size: var(--print-page-size, 80mm auto); margin: 0; }
+  html, body { background: #fff !important; }
+  body > *:not(#print-area) { display: none !important; }
+  #print-area {
+    display: block; width: var(--print-content-width, 80mm); max-width: 100%; margin-inline: auto; padding: 3mm 4mm 6mm; color: #000;
+    font: 12.5px/1.35 "Courier New", Consolas, monospace;
+  }
+  #print-area * { color: #000 !important; }
+}
+.r-c { text-align: center; }
+.r-shop { font-size: 18px; font-weight: 800; letter-spacing: .5px; }
+.r-title { font-size: 15px; font-weight: 800; margin: 6px 0 2px; }
+.r-big { font-size: 22px; font-weight: 800; }
+.r-hr { border-top: 1px dashed #000; margin: 6px 0; }
+.r-row { display: flex; justify-content: space-between; gap: 8px; }
+.r-total { font-size: 16px; font-weight: 800; }
+.r-tb { width: 100%; border-collapse: collapse; }
+.r-tb td { padding: 2px 0; vertical-align: top; }
+.r-tb.bill-items th, .r-tb.bill-items td { border: .5px solid #777; padding: 3px 2px; }
+.r-tb.bill-items th { text-align: center; font-weight: 700; }
+.r-tb .q { width: 26px; text-align: center; }
+.r-tb .m { text-align: right; white-space: nowrap; padding-left: 6px; }
+.r-note { font-size: 11.5px; font-style: italic; padding-left: 8px; }
+.r-k-item { font-size: 17px; font-weight: 800; margin: 4px 0; }
+.r-k-note { font-size: 14px; padding-left: 26px; }
+.r-qr { width: 46mm; margin: 6px auto 2px; }

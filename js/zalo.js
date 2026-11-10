@@ -51,7 +51,7 @@ export async function deliver(target, text, opts = {}) {
   const enabled = target === 'kitchen' ? z.sendKitchen : target === 'bill' ? z.sendBill : true;
   if (opts.autoPrint && opts.print) printHTML(opts.print());
   if (!enabled) return false;
-  const chatId = target === 'kitchen' ? z.kitchenChatId : (z.billChatId || z.kitchenChatId);
+  const chatId = z.kitchenChatId || z.billChatId;
   if (autoReady() && chatId) {
     try {
       await sendAuto(chatId, text);

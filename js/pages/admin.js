@@ -146,8 +146,7 @@ function settingsHTML() {
       <div class="stack ${z.auto ? '' : 'hidden'}" id="zaloAuto">
         <label class="field"><span>Địa chỉ Worker (Cloudflare)</span><input class="input" data-k="zalo.workerUrl" value="${esc(z.workerUrl)}" placeholder="https://quanla-zalo.ten-ban.workers.dev"></label>
         <label class="field"><span>App Key (APP_KEY trong Worker)</span><input class="input" data-k="zalo.appKey" value="${esc(z.appKey)}" type="password" autocomplete="off"></label>
-        <label class="field"><span>ID nhóm Bếp</span><input class="input" data-k="zalo.kitchenChatId" value="${esc(z.kitchenChatId)}" placeholder="Nhắn /id trong nhóm để lấy"></label>
-        <label class="field"><span>ID nhóm Hóa đơn (bỏ trống = dùng nhóm Bếp)</span><input class="input" data-k="zalo.billChatId" value="${esc(z.billChatId)}"></label>
+        <label class="field"><span>ID nhóm Zalo</span><input class="input" data-k="zalo.kitchenChatId" value="${esc(z.kitchenChatId || z.billChatId || '')}" placeholder="Nhắn /id trong nhóm để lấy"></label>
         <div class="divider"></div>
         <label class="field"><span>Bot Token</span><input class="input" id="zaloBotToken" type="password" autocomplete="new-password" placeholder="Dán token từ Zalo Bot Manager"></label>
         <label class="field"><span>Khóa quản trị Worker (ADMIN_KEY)</span><input class="input" id="zaloAdminKey" type="password" autocomplete="new-password" placeholder="Nhập ADMIN_KEY đã tạo trong Cloudflare"></label>

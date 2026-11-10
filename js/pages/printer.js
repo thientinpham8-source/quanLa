@@ -22,12 +22,7 @@ function render() {
       </div>
       <div class="card card-pad stack">
         <h3>${icon('print')} Kết nối máy in</h3>
-        <label class="field"><span>Cách kết nối</span><select class="input" data-k="connection">
-          <option value="system" ${p.connection !== 'bluetooth' ? 'selected' : ''}>Theo hộp thoại in của điện thoại</option>
-          <option value="bluetooth" ${p.connection === 'bluetooth' ? 'selected' : ''}>Bluetooth (ghép nối BLE)</option>
-        </select></label>
-        <div class="row wrap"><button class="btn" data-a="pair">Chọn máy Bluetooth</button><span class="small muted" data-printer-name>${esc(p.bluetoothName || 'Chưa chọn máy in')}</span></div>
-        <div class="xs muted">Ghép nối Bluetooth trên web chỉ hoạt động với trình duyệt và máy in BLE tương thích. Nhiều máy in hóa đơn dùng Bluetooth SPP nên không xuất hiện. QuanLa hiện mở hộp thoại in của hệ điều hành; ghép nối ở đây chưa bật in trực tiếp hay tự động qua Bluetooth.</div>
+        <div class="xs muted">Máy in nhiệt kết nối với máy tính qua USB hoặc cáp mạng sẽ được chọn trong hộp thoại in. Hãy cài driver và chọn đúng khổ giấy trong thiết lập máy in của máy tính.</div>
       </div>
       <div class="card card-pad stack">
         <h3>${icon('print')} Tự động in</h3>
@@ -47,13 +42,12 @@ function render() {
 export default {
   async mount(root) {
     el = root;
-    draft = { autoBill: false, autoKitchen: false, showQR: true, footer: '', paperSize: '80mm', connection: 'system', bluetoothName: '', bluetoothDeviceId: '', ...(store.settings.print || {}) };
+    draft = { autoBill: false, autoKitchen: false, showQR: true, footer: '', paperSize: '80mm', connection: 'system', ...(store.settings.print || {}) };
     setTitle('Máy in');
     render();
     const onChange = e => {
       const t = e.target;
       if (t.dataset.k) draft[t.dataset.k] = t.type === 'checkbox' ? t.checked : t.value;
-      if (t.dataset.k === 'connection') render();
     };
     const onClick = async e => {
       const t = e.target.closest('[data-a]');
@@ -61,20 +55,6 @@ export default {
       if (t.dataset.a === 'save') {
         await db.update('settings', 'main', { print: { ...draft } });
         toast('Đã lưu cài đặt máy in');
-      } else if (t.dataset.a === 'pair') {
-        if (!navigator.bluetooth?.requestDevice) {
-          toast('Trình duyệt này không hỗ trợ ghép nối Bluetooth BLE.');
-          return;
-        }
-        try {
-          const device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true });
-          draft.bluetoothName = device.name || 'Máy in Bluetooth';
-          draft.bluetoothDeviceId = device.id;
-          draft.connection = 'bluetooth';
-          render();
-        } catch (err) {
-          if (err.name !== 'NotFoundError') toast('Không ghép nối được máy in Bluetooth.');
-        }
       } else if (t.dataset.a === 'test') {
         const original = store.settings.print;
         store.settings.print = { ...draft };

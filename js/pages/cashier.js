@@ -226,7 +226,7 @@ async function complete() {
     let autoSent = false;
     if (s.zalo.sendBill && autoReady()) autoSent = await deliver('bill', text, { title: 'Hóa đơn ' + closed.code });
     successModal(closed, text, autoSent);
-    location.hash = '#/tables';
+    location.hash = '#/orders';
   } catch (e) { done = false; btn.disabled = false; toast(e.message || 'Thanh toán thất bại', 'err'); }
 }
 

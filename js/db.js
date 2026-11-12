@@ -1,7 +1,7 @@
 // ===== Lớp dữ liệu: 1 giao diện chung cho 2 chế độ =====
 //  - local    : chế độ DEMO, lưu localStorage, đồng bộ giữa các tab trên cùng máy
 //  - firebase : chạy thật, Firestore realtime + offline + Firebase Auth
-import { FIREBASE_CONFIG, ACCOUNTS, SHOP_ID, FIREBASE_VERSION } from './config.js';
+import { FIREBASE_CONFIG, ACCOUNTS, SHOP_ID, FIREBASE_VERSION } from './config.js?v=1.0.59';
 import { uid, clone, hashPin } from './utils.js';
 
 const ARR = '__arrayUnion', INC = '__increment';
@@ -188,7 +188,7 @@ async function createFirebase(cfg) {
   const fire = p => { p.catch(e => window.dispatchEvent(new CustomEvent('db-error', { detail: e }))); return Promise.resolve(); };
   const emailRole = () => {
     const e = auth.currentUser?.email;
-    return e === ACCOUNTS.cashier ? 'cashier' : e === ACCOUNTS.order ? 'order' : null;
+    return e === ACCOUNTS.cashier ? 'cashier' : e === ACCOUNTS.order ? 'order' : e === ACCOUNTS.kitchen ? 'kitchen' : null;
   };
 
   return {

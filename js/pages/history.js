@@ -1,6 +1,6 @@
 // ===== C03 – Lịch sử bill =====
-import { db } from '../db.js';
-import { store } from '../store.js';
+import { db } from '../db.js?v=1.0.59';
+import { store } from '../store.js?v=1.0.59';
 import { icon, modal, confirmBox, toast, setTitle } from '../ui.js';
 import { esc, money, num, fmtTime, dayKey, addDays, norm } from '../utils.js';
 import { calc, groupItems, adjLabel, payLabel, billText, billPrintHTML, printHTML } from '../bill.js?v=1.0.40';
@@ -30,9 +30,9 @@ function renderList() {
   const deleteButton = el.querySelector('[data-act="delete-day"]');
   if (deleteButton) deleteButton.disabled = deleting || !bills.some(b => CLOSED_STATUSES.has(b.status));
   el.querySelector('#hsum').innerHTML = `<b>${paid.length}</b> bill · <b class="text-brand">${money(paid.reduce((s, b) => s + (b.total || 0), 0))}</b>`;
-  el.querySelector('#hlist').innerHTML = list.length ? `<div class="card">${list.map(b => `
+  el.querySelector('#hlist').innerHTML = list.length ? `<div class="card card-list">${list.map(b => `
     <div class="hist-item" data-id="${b.id}">
-      <span class="avatar" style="border-radius:12px;width:42px;height:42px;background:${b.status === 'paid' ? 'var(--brand)' : 'var(--danger)'}">${icon(b.status === 'paid' ? 'receipt' : 'x')}</span>
+      <span class="avatar history-avatar ${b.status === 'paid' ? 'paid' : 'void'}">${icon(b.status === 'paid' ? 'receipt' : 'x')}</span>
       <span class="grow"><b>${esc(b.tableName)}</b> <span class="xs muted">${esc(b.code || '')}</span>
         <div class="xs muted">${fmtTime(b.openedAt)} – ${fmtTime(b.closedAt)} · ${b.status === 'paid' ? payLabel(b.pay?.method) : ST[b.status]} · ${esc(b.closedBy || '')}</div></span>
       <span class="right"><b class="num">${b.status === 'paid' ? money(b.total) : '—'}</b><div><span class="pill st-${b.status}">${ST[b.status]}</span></div></span>
@@ -116,7 +116,7 @@ export default {
       <div class="stack mb">
         <div class="row">
           <button class="icon-btn" data-d="-1" aria-label="Ngày trước">${icon('back')}</button>
-          <input class="input" type="date" id="day" value="${day}" style="max-width:190px">
+          <input class="input date-input" type="date" id="day" value="${day}">
           <button class="icon-btn" data-d="1" aria-label="Ngày sau">${icon('next')}</button>
           <button class="btn btn-sm" data-d="0">Hôm nay</button>
         </div>

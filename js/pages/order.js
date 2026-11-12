@@ -1,9 +1,9 @@
 // ===== O02 / O03 – Gọi món + giỏ món / đơn của bàn =====
-import { store, tableById, billOfTable, menuById } from '../store.js';
+import { store, tableById, billOfTable, menuById } from '../store.js?v=1.0.59';
 import { icon, toast, modal, confirmBox, promptBox, pickBox, setTitle } from '../ui.js';
 import { esc, money, norm, fmtTime, minutesSince, dur } from '../utils.js';
 import { calc, rounds, kitchenText, kitchenPrintHTML, sumItems, itemCount } from '../bill.js?v=1.0.38';
-import { sendItems, requestPayment, reopenBill, moveTable, mergeBills, voidItem, increaseBillItem, setAvailable } from '../actions.js';
+import { sendItems, requestPayment, reopenBill, moveTable, mergeBills, voidItem, increaseBillItem, setAvailable } from '../actions.js?v=1.0.59';
 import { deliver } from '../zalo.js';
 
 let el, tableId, cart = [], cat = 'all', q = '', soldMode = false, sending = false, cartOpen = false;
@@ -66,7 +66,7 @@ function skeleton() {
       <div class="pane-head" id="head"></div>
       <div class="menu-tools">
         <div class="menu-page-nav" id="cats"></div>
-        <div class="searchbox">${icon('search')}<input class="input" id="q" type="search" placeholder="Tìm trong danh mục này…" value="${esc(q)}" autocomplete="off"></div>
+        <div class="searchbox">${icon('search')}<input class="input" id="q" type="search" placeholder="Tìm toàn bộ thực đơn…" value="${esc(q)}" autocomplete="off"></div>
       </div>
       <div id="soldBanner"></div>
       <div class="menu-list" id="menuList"></div>
@@ -91,21 +91,29 @@ function renderHead() {
 function renderCats() {
   const cats = el.querySelector('#cats');
   const list = store.categories;
-  let index = list.findIndex(c => c.id === cat);
-  if (index < 0 && list.length) { index = 0; cat = list[0].id; }
-  cats.innerHTML = list.length ? `<button class="icon-btn" data-act="pagePrev" aria-label="Danh mục trước" ${index <= 0 ? 'disabled' : ''}>${icon('back')}</button>
-    <div class="menu-page-label"><small>TRANG ${index + 1} / ${list.length}</small><b>${esc(list[index].name)}</b></div>
-    <button class="icon-btn" data-act="pageNext" aria-label="Danh mục tiếp" ${index >= list.length - 1 ? 'disabled' : ''}>${icon('next')}</button>`
-    : `<div class="menu-page-label"><small>THỰC ĐƠN</small><b>Chưa có danh mục</b></div>`;
+  const nq = norm(q);
+  if (nq) {
+    const count = store.menu.filter(m => norm(m.name).includes(nq)).length;
+    cats.innerHTML = `<div class="menu-page-nav menu-search-state">${icon('search')}<div class="menu-page-label"><small>TOÀN BỘ THỰC ĐƠN</small><b>${count} món phù hợp</b></div></div>`;
+  } else {
+    let index = list.findIndex(c => c.id === cat);
+    if (index < 0 && list.length) { index = 0; cat = list[0].id; }
+    cats.innerHTML = list.length ? `<button class="icon-btn" data-act="pagePrev" aria-label="Danh mục trước" ${index <= 0 ? 'disabled' : ''}>${icon('back')}</button>
+      <div class="menu-page-label"><small>TRANG ${index + 1} / ${list.length}</small><b>${esc(list[index].name)}</b></div>
+      <button class="icon-btn" data-act="pageNext" aria-label="Danh mục tiếp" ${index >= list.length - 1 ? 'disabled' : ''}>${icon('next')}</button>`
+      : `<div class="menu-page-label"><small>THỰC ĐƠN</small><b>Chưa có danh mục</b></div>`;
+  }
   el.querySelector('#soldBanner').innerHTML = soldMode
     ? `<div class="notice warn soldmode-banner">${icon('ban')}<div><b>Chế độ báo hết món</b> – chạm vào món để bật/tắt "Hết". <button class="text-brand bold" data-act="soldmode">Xong</button></div></div>` : '';
 }
 
-function itemHTML(m) {
+function itemHTML(m, showCategory = false) {
   const qn = qtyOf(m.id);
   const sold = m.available === false;
+  const categoryName = showCategory ? store.categories.find(c => c.id === m.categoryId)?.name || 'Khác' : '';
   return `<div class="mitem ${sold ? 'is-sold' : ''} ${qn ? 'in-cart' : ''}" data-act="add" data-id="${m.id}">
     <div class="mi-main"><div class="mi-name">${esc(m.name)}</div>
+      ${showCategory ? `<small class="mi-category">${esc(categoryName)}</small>` : ''}
       <div class="mi-price">${m.price > 0 ? money(m.price) : esc(m.priceLabel || 'Chưa có giá')} ${sold ? '<span class="tag-sold">HẾT</span>' : ''}</div>${m.priceNote ? `<small class="muted">${esc(m.priceNote)}</small>` : ''}</div>
     <div class="mi-ctrl">
       ${soldMode ? `<span class="pill ${sold ? 'st-cancelled' : 'st-open'}">${sold ? 'Hết' : 'Còn'}</span>` : `<span class="add" aria-hidden="true">${icon('plus')}</span>`}
@@ -116,12 +124,12 @@ function renderMenu() {
   const list = el.querySelector('#menuList');
   if (!list) return;
   const nq = norm(q);
-  const items = store.menu.filter(m => (cat === 'all' || m.categoryId === cat) && (!nq || norm(m.name).includes(nq)));
+  const items = store.menu.filter(m => nq ? norm(m.name).includes(nq) : cat === 'all' || m.categoryId === cat);
   if (!items.length) {
-    list.innerHTML = `<div class="empty">${icon('search')}${nq ? 'Không tìm thấy món trong danh mục này' : 'Danh mục chưa có món'}</div>`;
+    list.innerHTML = `<div class="empty">${icon('search')}${nq ? 'Không tìm thấy món phù hợp trong thực đơn' : 'Danh mục chưa có món'}</div>`;
     return;
   }
-  list.innerHTML = items.map(itemHTML).join('');
+  list.innerHTML = items.map(item => itemHTML(item, !!nq)).join('');
 }
 
 function renderCart() {
@@ -144,7 +152,7 @@ function renderCart() {
             <button class="cl-note ${c.note ? 'has' : ''}" data-act="note" data-i="${i}">${icon('note')}<span class="ellipsis">${esc(c.note || 'Ghi chú')}</span></button></div>
           <div class="qty"><button data-act="cdec" data-i="${i}" aria-label="Bớt">${icon(c.qty > 1 ? 'minus' : 'trash')}</button><span>${c.qty}</span><button data-act="cinc" data-i="${i}" aria-label="Thêm">${icon('plus')}</button></div>
           <div class="cl-sum">${money(c.qty * c.price)}</div>
-        </div>`).join('') : `<div class="muted small" style="padding:10px 2px">Chạm vào món bên ${matchMedia('(min-width:900px)').matches ? 'trái' : 'dưới'} để thêm.</div>`}
+        </div>`).join('') : `<div class="muted small order-hint">Chạm vào món bên ${matchMedia('(min-width:900px)').matches ? 'trái' : 'dưới'} để thêm.</div>`}
     ${b && b.items?.length ? `<div class="cp-sec"><span>Đã gửi bếp</span><span>${sent.count} món</span></div>
         ${rounds(b).map(r => `<div class="round"><div class="round-h"><span>Lần ${r.round} · ${fmtTime(r.at)}</span><span>${esc(r.by || '')}</span></div>
           ${r.items.map(it => `<div class="sline ${it.void ? 'void' : ''}">
@@ -167,9 +175,9 @@ function renderCart() {
   // Thanh dưới (điện thoại)
   const bar = el.querySelector('#cartBar');
   if (b) {
-    bar.innerHTML = `<button class="cb-info" data-act="openCartSheet"><span class="cb-count" style="background:var(--accent)">${totalCount}</span><span class="cb-text"><b>${money(totalAmount)}</b><small>Bill tạm tính · chạm để xem món</small></span></button>
+    bar.innerHTML = `<button class="cb-info" data-act="openCartSheet"><span class="cb-count accent-count">${totalCount}</span><span class="cb-text"><b>${money(totalAmount)}</b><small>Bill tạm tính · chạm để xem món</small></span></button>
       <button class="btn btn-ghost cart-action-icon" data-act="move" aria-label="Chuyển bàn" title="Chuyển bàn">${icon('move')}</button><button class="btn btn-ghost cart-action-icon" data-act="merge" aria-label="Ghép bàn" title="Ghép bàn">${icon('merge')}</button>
-      ${cart.length ? `<button class="btn btn-primary" data-act="send" ${sending ? 'disabled' : ''}>${icon('send')} Gửi bếp</button>` : b.status === 'waiting' ? `<span class="pill st-waiting" style="align-self:center">Chờ TT</span>` : `<button class="btn btn-accent" data-act="pay" ${b.items?.length ? '' : 'disabled'}>Tính tiền</button>`}`;
+      ${cart.length ? `<button class="btn btn-primary" data-act="send" ${sending ? 'disabled' : ''}>${icon('send')} Gửi bếp</button>` : b.status === 'waiting' ? `<span class="pill st-waiting cart-status">Chờ TT</span>` : `<button class="btn btn-accent" data-act="pay" ${b.items?.length ? '' : 'disabled'}>Tính tiền</button>`}`;
   } else if (cart.length) {
     bar.innerHTML = `<button class="cb-info" data-act="opencart"><span class="cb-count">${totalCount}</span><span class="cb-text"><b>${money(totalAmount)}</b><small>Bill tạm tính · chạm để xem món</small></span></button>
       <button class="btn btn-primary" data-act="send" ${sending ? 'disabled' : ''}>${icon('send')} Gửi bếp</button>`;
@@ -385,7 +393,7 @@ export default {
         case 'soldmode': soldMode = !soldMode; el.querySelector('#op').classList.toggle('soldmode', soldMode); renderHead(); renderCats(); renderMenu(); break;
       }
     };
-    const onInput = e => { if (e.target.id === 'q') { q = e.target.value; renderMenu(); } };
+    const onInput = e => { if (e.target.id === 'q') { q = e.target.value; renderCats(); renderMenu(); } };
     el.addEventListener('click', onClick);
     el.addEventListener('input', onInput);
     const tick = setInterval(renderHead, 30000);

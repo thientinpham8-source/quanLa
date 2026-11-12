@@ -1,5 +1,5 @@
 // ===== Tính tiền, mẫu phiếu bếp / hóa đơn (chữ Zalo, bản in 80mm, ảnh) =====
-import { store } from './store.js';
+import { store } from './store.js?v=1.0.59';
 import { money, num, esc, fmtTime, fmtDate, fmtDT } from './utils.js';
 
 export const BANKS = [

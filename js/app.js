@@ -1,25 +1,26 @@
 // ===== Khởi động ứng dụng + điều hướng =====
-import { initDB, db } from './db.js';
-import { store, startSync, onChange, seedIfNeeded } from './store.js';
-import { restore, logout, ROLE_NAME } from './auth.js';
+import { initDB, db } from './db.js?v=1.0.59';
+import { store, startSync, onChange, seedIfNeeded } from './store.js?v=1.0.59';
+import { restore, logout, ROLE_NAME } from './auth.js?v=1.0.59';
 import { icon, logo, toast, modal } from './ui.js';
 import { esc, initials } from './utils.js';
-import { unlockAudio, watchBills } from './notify.js';
-import { APP_VERSION } from './config.js';
+import { unlockAudio, watchBills } from './notify.js?v=1.0.59';
+import { APP_VERSION } from './config.js?v=1.0.69';
 
-import login from './pages/login.js?v=1.0.42';
-import tables from './pages/tables.js?v=1.0.43';
-import order from './pages/order.js?v=1.0.46';
-import orders from './pages/orders.js?v=1.0.42';
-import bill from './pages/cashier.js?v=1.0.41';
-import history from './pages/history.js?v=1.0.42';
-import reports from './pages/reports.js?v=1.0.42';
-import admin from './pages/admin.js?v=1.0.45';
-import soldout from './pages/soldout.js?v=1.0.41';
-import printer from './pages/printer.js?v=1.0.43';
-import inventory from './pages/inventory.js?v=1.0.48';
+import login from './pages/login.js?v=1.0.59';
+import tables from './pages/tables.js?v=1.0.59';
+import order from './pages/order.js?v=1.0.59';
+import orders from './pages/orders.js?v=1.0.68';
+import bill from './pages/cashier.js?v=1.0.59';
+import history from './pages/history.js?v=1.0.59';
+import reports from './pages/reports.js?v=1.0.59';
+import admin from './pages/admin.js?v=1.0.69';
+import soldout from './pages/soldout.js?v=1.0.59';
+import printer from './pages/printer.js?v=1.0.59';
+import inventory from './pages/inventory.js?v=1.0.59';
+import kitchen from './pages/kitchen.js?v=1.0.65';
 
-const ROUTES = { login, tables, order, orders, bill, history, reports, admin, soldout, printer, inventory };
+const ROUTES = { login, tables, order, orders, bill, history, reports, admin, soldout, printer, inventory, kitchen };
 const NAV = {
   order: [['tables', 'Sơ đồ bàn', 'grid'], ['orders', 'Đơn', 'list']],
   cashier: [
@@ -32,8 +33,13 @@ const NAV = {
     ['printer', 'Máy in', 'print'],
     ['admin', 'Quản lý', 'settings'],
   ],
+  kitchen: [['kitchen', 'Phiếu bếp', 'chef']],
 };
-const ALLOWED = { order: ['tables', 'order', 'orders'], cashier: Object.keys(ROUTES) };
+const ALLOWED = {
+  order: ['tables', 'order', 'orders'],
+  cashier: Object.keys(ROUTES).filter(route => route !== 'kitchen'),
+  kitchen: ['kitchen'],
+};
 
 const app = document.getElementById('app');
 let current = null;
@@ -75,14 +81,14 @@ function renderShell(role) {
   app.innerHTML = `<div class="shell" id="shell">
     <aside class="sidenav">
       <div class="brand">${logo()}<div><span class="shop-name">${esc(store.settings.shopName)}</span><small>${ROLE_NAME[role]}</small></div></div>
-      <nav>${nav.map(([k, l, i]) => `<a href="#/${k}" data-nav="${k}">${icon(i)}<span>${l}</span>${k === 'orders' ? '<b class="nav-badge" data-badge="orders"></b>' : ''}</a>`).join('')}</nav>
+      <nav>${nav.map(([k, l, i]) => `<a href="#/${k}" data-nav="${k}">${icon(i)}<span>${l}</span>${k === 'orders' ? '<b class="nav-badge" data-badge="orders"></b>' : k === 'kitchen' ? '<b class="nav-badge" data-badge="kitchen"></b>' : ''}</a>`).join('')}</nav>
       <div class="side-foot">
         <div class="side-clock">
           <div class="clock-time">${icon('clock')} <span id="clockTime">--:--:--</span></div>
           <div class="clock-date" id="clockDate">--/--/----</div>
         </div>
-        <button class="btn btn-ghost btn-block" data-act="logout" style="justify-content:flex-start">${icon('logout')} Đăng xuất</button>
-        <div class="xs muted" style="padding:6px 12px">v${APP_VERSION} · ${db.mode === 'local' ? 'Chế độ demo' : 'Firebase'}</div>
+        <button class="btn btn-ghost btn-block btn-start" data-act="logout">${icon('logout')} Đăng xuất</button>
+        <div class="xs muted side-version">v${APP_VERSION} · ${db.mode === 'local' ? 'Chế độ demo' : 'Firebase'}</div>
       </div>
     </aside>
     <header class="topbar">
@@ -95,7 +101,7 @@ function renderShell(role) {
       </div>
     </header>
     <main class="main" id="main"></main>
-    <nav class="bottomnav">${nav.map(([k, l, i]) => `<a href="#/${k}" data-nav="${k}">${icon(i)}<span>${l}</span>${k === 'orders' ? '<b class="nav-badge" data-badge="orders"></b>' : ''}</a>`).join('')}</nav>
+    <nav class="bottomnav">${nav.map(([k, l, i]) => `<a href="#/${k}" data-nav="${k}">${icon(i)}<span>${l}</span>${k === 'orders' ? '<b class="nav-badge" data-badge="orders"></b>' : k === 'kitchen' ? '<b class="nav-badge" data-badge="kitchen"></b>' : ''}</a>`).join('')}</nav>
   </div>`;
   shellRole = role;
   startClock();
@@ -110,8 +116,8 @@ function userMenu() {
   const u = store.user;
   modal({
     title: 'Tài khoản',
-    body: `<div class="row" style="gap:12px"><span class="avatar ${u.role}" style="width:48px;height:48px;font-size:18px">${esc(initials(u.name))}</span>
-      <div><b style="font-size:17px">${esc(u.name)}</b><div class="muted small">Vai trò: ${ROLE_NAME[u.role]}</div></div></div>
+    body: `<div class="row user-summary"><span class="avatar avatar-lg ${u.role}">${esc(initials(u.name))}</span>
+      <div><b class="user-name">${esc(u.name)}</b><div class="muted small">Vai trò: ${ROLE_NAME[u.role]}</div></div></div>
       <div class="notice mt">${icon('info')}<div>Dữ liệu: <b>${db.mode === 'local' ? 'Chế độ demo (lưu trên trình duyệt này)' : 'Firebase – đồng bộ mọi thiết bị'}</b></div></div>`,
     foot: `<button class="btn btn-danger-soft" data-lo>${icon('logout')} Đăng xuất</button>`,
     onMount: api => {
@@ -123,9 +129,10 @@ function userMenu() {
 async function route() {
   const { name, params } = parse();
   const user = store.user;
+  const home = user?.role === 'kitchen' ? 'kitchen' : 'tables';
   if (!user?.role && name !== 'login') return go('login');
-  if (user?.role && name === 'login') return go('tables');
-  if (user?.role && !ALLOWED[user.role].includes(name)) return go('tables');
+  if (user?.role && name === 'login') return go(home);
+  if (user?.role && !ALLOWED[user.role].includes(name)) return go(home);
 
   try { current?.cleanup?.(); } catch {}
   const page = ROUTES[name] || tables;
@@ -149,7 +156,7 @@ async function boot() {
   try { await initDB(); }
   catch (e) {
     console.error(e);
-    app.innerHTML = `<div class="splash"><div class="center" style="max-width:420px">${logo()}<h2 class="mt">Chưa sẵn sàng chạy thật</h2><p class="muted small mt">${esc(e.message || 'Không kết nối được Firebase. Kiểm tra cấu hình và Internet.')}</p><p class="muted small mt">Cần cấu hình Firebase Web App, bật Email/Password Authentication, tạo tài khoản Order/Thu Ngân và triển khai Firestore Rules.</p><button class="btn btn-primary mt" onclick="location.reload()">Thử lại</button></div></div>`;
+    app.innerHTML = `<div class="splash"><div class="center startup-message">${logo()}<h2 class="mt">Chưa sẵn sàng chạy thật</h2><p class="muted small mt">${esc(e.message || 'Không kết nối được Firebase. Kiểm tra cấu hình và Internet.')}</p><p class="muted small mt">Cần cấu hình Firebase Web App, bật Email/Password Authentication, tạo tài khoản Order/Thu Ngân/Bếp và triển khai Firestore Rules.</p><button class="btn btn-primary mt" onclick="location.reload()">Thử lại</button></div></div>`;
     return;
   }
   if (db.mode === 'local') await seedIfNeeded();

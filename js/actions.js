@@ -1,11 +1,12 @@
 // ===== Nghiệp vụ: mở bàn, gửi món, tính tiền, chuyển/gộp bàn, hủy món, thanh toán =====
-import { db, F } from './db.js';
-import { store, tableById } from './store.js';
+import { db, F } from './db.js?v=1.0.59';
+import { store, tableById, KITCHEN_TICKET_STATUSES } from './store.js?v=1.0.59';
 import { uid, dayKey } from './utils.js';
 import { calc } from './bill.js';
 
 const ACTIVE = ['open', 'waiting'];
 const isNetErr = e => /unavailable|network|offline|failed-precondition|deadline/i.test(`${e?.code} ${e?.message}`);
+const isKitchenTicketActive = ticket => KITCHEN_TICKET_STATUSES.includes(ticket.status);
 
 // Giao dịch an toàn: online -> transaction (chống 2 người ghi đè), offline -> ghi thẳng
 async function safeTxn(run, fallback) {
@@ -48,12 +49,20 @@ export async function sendItems(tableId, cart, by) {
   const round = (bill?.rounds || 0) + 1;
   const at = Date.now();
   const items = cart.map(c => ({ id: uid(), menuId: c.menuId, name: c.name, price: c.price, qty: c.qty, note: c.note || '', round, by, at }));
+  const ticketId = db.newId();
+  const ticket = {
+    billId, tableId, tableName: bill?.tableName || tableById(tableId)?.name,
+    round, kind: 'order',
+    items: items.map(({ id, name, qty, note }) => ({ id, name, qty, note })),
+    status: 'waiting', createdAt: at, createdBy: by, updatedAt: at,
+  };
   const patch = { items: F.arrayUnion(...items), rounds: F.increment(1), staff: F.arrayUnion(by), updatedAt: at, lastBy: by };
   const ops = [];
   if (bill?.status === 'waiting') { patch.status = 'open'; ops.push(['update', 'tables', tableId, { status: 'serving' }]); }
   ops.unshift(['update', 'bills', billId, patch]);
+  ops.push(['set', 'kitchen_tickets', ticketId, ticket]);
   await db.batch(ops);
-  return { billId, items, round, at, tableName: bill?.tableName || tableById(tableId)?.name };
+  return { billId, items, round, at, ticketId, tableName: ticket.tableName };
 }
 
 /** Order bấm "Tính tiền" */
@@ -76,14 +85,18 @@ export async function moveTable(fromId, toId) {
   if (!from?.billId) throw new Error('Bàn nguồn chưa có khách');
   if (to.billId && store.bills[to.billId]) throw new Error('Bàn đích đang có khách');
   const billId = from.billId;
+  const tickets = store.kitchenTickets.filter(t => t.billId === billId);
+  const at = Date.now();
   const ops = tx => {
-    tx.update('bills', billId, { tableId: toId, tableName: to.name, updatedAt: Date.now() });
+    tx.update('bills', billId, { tableId: toId, tableName: to.name, updatedAt: at });
     tx.update('tables', toId, { status: from.status, billId, openedAt: from.openedAt || Date.now() });
     tx.update('tables', fromId, { status: 'empty', billId: null, openedAt: null });
+    tickets.forEach(ticket => tx.update('kitchen_tickets', ticket.id, { tableId: toId, tableName: to.name, updatedAt: at }));
   };
   await safeTxn(async tx => {
     const t2 = await tx.get('tables', toId);
     if (t2.billId) { const b2 = await tx.get('bills', t2.billId); if (b2 && ACTIVE.includes(b2.status)) throw new Error('Bàn đích vừa có khách'); }
+    for (const ticket of tickets) await tx.get('kitchen_tickets', ticket.id);
     ops(tx);
   }, async () => { const w = []; ops({ update: (c, i, p) => w.push(['update', c, i, p]) }); await db.batch(w); });
   // chuyển giỏ chưa gửi trên máy này
@@ -97,11 +110,12 @@ export async function mergeBills(srcId, dstId, by) {
   const src = store.bills[srcId], dst = store.bills[dstId];
   if (!src || !dst) throw new Error('Bill không còn hoạt động');
   const now = Date.now();
-  const moved = (src.items || []).map(i => ({ ...i, id: uid(), note: [i.note, `từ ${src.tableName}`].filter(Boolean).join(' · ') }));
+  const moved = (src.items || []).map(i => ({ ...i, note: [i.note, `từ ${src.tableName}`].filter(Boolean).join(' · ') }));
   const ops = [
     ['update', 'bills', dstId, { items: F.arrayUnion(...moved), staff: F.arrayUnion(...(src.staff || [])), rounds: F.increment(1), updatedAt: now }],
     ['update', 'bills', srcId, { status: 'merged', mergedInto: dstId, closedAt: now, closedBy: by, day: dayKey(now), updatedAt: now }],
     ['update', 'tables', src.tableId, { status: 'empty', billId: null, openedAt: null }],
+    ...store.kitchenTickets.filter(t => t.billId === srcId).map(t => ['update', 'kitchen_tickets', t.id, { billId: dstId, tableId: dst.tableId, tableName: dst.tableName, updatedAt: now }]),
   ];
   if (!moved.length) ops.shift();
   await db.batch(ops);
@@ -109,39 +123,122 @@ export async function mergeBills(srcId, dstId, by) {
 
 /** Hủy món (thu ngân) – có thể hủy 1 phần số lượng */
 export async function voidItem(billId, itemId, qty, reason, by) {
+  const amount = Number(qty);
+  if (!Number.isInteger(amount) || amount <= 0) throw new Error('Số lượng hủy không hợp lệ');
+  const at = Date.now();
+  const tickets = store.kitchenTickets.filter(t => t.billId === billId);
   const apply = bill => {
+    if (!bill) throw new Error('Bill không còn hoạt động');
+    const target = (bill.items || []).find(item => item.id === itemId && !item.void);
+    if (!target) throw new Error('Món không còn trên bill');
+    const targetQty = Number(target.qty);
+    if (!Number.isInteger(targetQty) || targetQty <= 0) throw new Error('Số lượng món trên bill không hợp lệ');
     const items = [];
     for (const it of bill.items || []) {
       if (it.id !== itemId || it.void) { items.push(it); continue; }
-      const mark = { void: true, voidReason: reason, voidBy: by, voidAt: Date.now() };
-      if (qty >= it.qty) items.push({ ...it, ...mark });
-      else { items.push({ ...it, qty: it.qty - qty }); items.push({ ...it, id: uid(), qty, ...mark }); }
+      const mark = { void: true, voidReason: reason, voidBy: by, voidAt: at };
+      if (amount >= targetQty) items.push({ ...it, ...mark });
+      else { items.push({ ...it, qty: targetQty - amount }); items.push({ ...it, id: uid(), voidOf: it.id, qty: amount, ...mark }); }
     }
     return items;
   };
-  await safeTxn(async tx => {
-    const b = await tx.get('bills', billId);
-    tx.update('bills', billId, { items: apply(b), updatedAt: Date.now() });
-  }, async () => db.update('bills', billId, { items: apply(store.bills[billId]), updatedAt: Date.now() }));
-}
-
-/** Tăng số lượng trực tiếp trên bill đang hoạt động (thu ngân). */
-export async function increaseBillItem(billId, itemId) {
-  const apply = bill => {
-    if (!bill || !ACTIVE.includes(bill.status)) throw new Error('Bill không còn hoạt động');
-    let found = false;
-    const items = (bill.items || []).map(it => {
-      if (it.id !== itemId || it.void) return it;
-      found = true;
-      return { ...it, qty: (Number(it.qty) || 0) + 1 };
-    });
-    if (!found) throw new Error('Món không còn trên bill');
-    return items;
+  const ticketPatch = (ticket, items) => {
+    const ticketItemIds = new Set((ticket.items || []).map(item => item.id));
+    const updatedItems = items.filter(item => ticketItemIds.has(item.id) || ticketItemIds.has(item.voidOf)).map(item => ({
+      id: item.id, name: item.name, qty: item.qty, note: item.note || '', void: !!item.void, voidReason: item.voidReason || '',
+    }));
+    return {
+      items: updatedItems,
+      ...(updatedItems.length && updatedItems.every(item => item.void) ? { status: 'cancelled' } : {}),
+      updatedAt: at,
+    };
   };
   await safeTxn(async tx => {
     const b = await tx.get('bills', billId);
-    tx.update('bills', billId, { items: apply(b), updatedAt: Date.now() });
-  }, async () => db.update('bills', billId, { items: apply(store.bills[billId]), updatedAt: Date.now() }));
+    const items = apply(b);
+    const kitchenDocs = await Promise.all(tickets.map(ticket => tx.get('kitchen_tickets', ticket.id)));
+    tx.update('bills', billId, { items, updatedAt: at });
+    kitchenDocs.forEach((ticket, i) => {
+      if (ticket && isKitchenTicketActive(ticket)) tx.update('kitchen_tickets', tickets[i].id, ticketPatch(ticket, items));
+    });
+  }, async () => {
+    const items = apply(store.bills[billId]);
+    const ops = [['update', 'bills', billId, { items, updatedAt: at }]];
+    tickets.forEach(ticket => {
+      if (isKitchenTicketActive(ticket)) ops.push(['update', 'kitchen_tickets', ticket.id, ticketPatch(ticket, items)]);
+    });
+    await db.batch(ops);
+  });
+}
+
+/** Tăng số lượng trực tiếp trên bill đang hoạt động (thu ngân). */
+export async function increaseBillItem(billId, itemId, { sendToKitchen = true } = {}) {
+  const ticketId = sendToKitchen ? db.newId() : null;
+  const additionId = sendToKitchen ? uid() : null;
+  const at = Date.now();
+  const by = store.user?.name || 'Thu Ngân';
+  const makeOps = bill => {
+    if (!bill || !ACTIVE.includes(bill.status)) throw new Error('Bill không còn hoạt động');
+    let found = false;
+    const source = (bill.items || []).find(it => it.id === itemId && !it.void);
+    if (source) found = true;
+    if (!found) throw new Error('Món không còn trên bill');
+    const items = sendToKitchen
+      ? [...bill.items, { ...source, id: additionId, qty: 1, round: (bill.rounds || 0) + 1, by, at }]
+      : bill.items.map(it => it.id === itemId && !it.void ? { ...it, qty: (Number(it.qty) || 0) + 1 } : it);
+    const patch = { items, updatedAt: at };
+    if (sendToKitchen) Object.assign(patch, { rounds: F.increment(1), staff: F.arrayUnion(by), lastBy: by });
+    const ops = [['update', 'bills', billId, patch]];
+    if (sendToKitchen) {
+      ops.push(['set', 'kitchen_tickets', ticketId, {
+        billId, tableId: bill.tableId, tableName: bill.tableName, round: (bill.rounds || 0) + 1, kind: 'additional',
+        items: [{ id: additionId, name: source.name, qty: 1, note: source.note || '' }],
+        status: 'waiting', createdAt: at, createdBy: by, updatedAt: at,
+      }]);
+      if (bill.status === 'waiting') ops.push(['update', 'tables', bill.tableId, { status: 'serving' }]);
+    }
+    return ops;
+  };
+  await safeTxn(async tx => {
+    const b = await tx.get('bills', billId);
+    const ops = makeOps(b);
+    ops.forEach(([op, collection, id, patch]) => op === 'set' ? tx.set(collection, id, patch) : tx.update(collection, id, patch));
+  }, async () => db.batch(makeOps(store.bills[billId])));
+}
+
+export async function advanceKitchenTicket(ticketId, nextStatus, by) {
+  if (store.user?.role !== 'kitchen') throw new Error('Chỉ tài khoản Bếp mới được cập nhật phiếu');
+  if (db.mode === 'firebase' && !navigator.onLine) throw new Error('Bếp cần kết nối Internet để cập nhật phiếu');
+  const at = Date.now();
+  const patch = nextStatus === 'preparing'
+    ? { status: nextStatus, startedAt: at, startedBy: by, updatedAt: at }
+    : { status: nextStatus, readyAt: at, readyBy: by, updatedAt: at };
+  const transitions = { waiting: 'preparing', preparing: 'ready' };
+  await db.txn(async tx => {
+    const ticket = await tx.get('kitchen_tickets', ticketId);
+    if (!ticket || transitions[ticket.status] !== nextStatus) throw new Error('Phiếu đã được cập nhật trên thiết bị khác');
+    tx.update('kitchen_tickets', ticketId, patch);
+  });
+}
+
+export async function serveReadyKitchenTickets(billId, by) {
+  if (!['order', 'cashier'].includes(store.user?.role)) throw new Error('Chỉ Order hoặc Thu ngân mới xác nhận đã mang món');
+  const tickets = store.kitchenTickets.filter(t => t.billId === billId);
+  if (!tickets.length || tickets.some(ticket => ticket.status !== 'ready')) throw new Error('Chưa đủ tất cả món để xác nhận');
+  if (db.mode === 'firebase' && !navigator.onLine) throw new Error('Cần kết nối Internet để xác nhận đã mang món');
+  const at = Date.now();
+  await db.txn(async tx => {
+    const bill = await tx.get('bills', billId);
+    if (!bill || !ACTIVE.includes(bill.status)) throw new Error('Bill không còn hoạt động');
+    const currentTickets = await Promise.all(tickets.map(ticket => tx.get('kitchen_tickets', ticket.id)));
+    if (currentTickets.some(ticket => !ticket || ticket.billId !== billId || ticket.status !== 'ready')) {
+      throw new Error('Phiếu đã được cập nhật trên thiết bị khác');
+    }
+    currentTickets.forEach(ticket => tx.update('kitchen_tickets', ticket.id, {
+      status: 'served', servedAt: at, servedBy: by, updatedAt: at,
+    }));
+  });
+  return tickets.length;
 }
 
 /** Lưu giảm giá / phụ thu tạm */
@@ -255,6 +352,8 @@ export async function adjustStock(menuId, newStock, note = '', by = '') {
 export async function completePayment(billId, { discount, surcharge, pay }, by) {
   const now = Date.now(), day = dayKey(now);
   const yymmdd = day.slice(2).replace(/-/g, '');
+  const kitchenTickets = store.kitchenTickets.filter(ticket => ticket.billId === billId);
+  const closeTicket = { status: 'closed', closedAt: now, closedBy: by, updatedAt: now };
   const finalize = (bill, code) => {
     const c = calc(bill, discount, surcharge);
     return {
@@ -279,6 +378,7 @@ export async function completePayment(billId, { discount, surcharge, pay }, by) 
     const counter = await tx.get('counters', 'bill');
     const bill = await tx.get('bills', billId);
     const table = await tx.get('tables', bill.tableId);
+    const ticketDocs = await Promise.all(kitchenTickets.map(ticket => tx.get('kitchen_tickets', ticket.id)));
     if (!bill || !ACTIVE.includes(bill.status)) throw new Error('Bill này đã được xử lý trên máy khác');
     const seq = counter?.day === day ? counter.seq + 1 : 1;
     const code = `HD${yymmdd}-${String(seq).padStart(3, '0')}`;
@@ -286,6 +386,9 @@ export async function completePayment(billId, { discount, surcharge, pay }, by) 
     tx.set('counters', 'bill', { day, seq });
     tx.update('bills', billId, patch);
     if (table?.billId === billId) tx.update('tables', bill.tableId, { status: 'empty', billId: null, openedAt: null });
+    ticketDocs.forEach((ticket, i) => {
+      if (ticket && isKitchenTicketActive(ticket)) tx.update('kitchen_tickets', kitchenTickets[i].id, closeTicket);
+    });
 
     // Tự động trừ số lượng trong kho khi xuất bán
     const soldMap = getSoldItems(bill);
@@ -307,6 +410,7 @@ export async function completePayment(billId, { discount, surcharge, pay }, by) 
     const ops = [
       ['update', 'bills', billId, patch],
       ['update', 'tables', bill.tableId, { status: 'empty', billId: null, openedAt: null }],
+      ...kitchenTickets.filter(isKitchenTicketActive).map(ticket => ['update', 'kitchen_tickets', ticket.id, closeTicket]),
     ];
 
     // Tự động trừ số lượng trong kho khi xuất bán (batch)
@@ -351,6 +455,9 @@ export async function cancelBill(billId, reason, by) {
   await db.batch([
     ['update', 'bills', billId, { status: 'cancelled', cancelReason: reason, closedAt: now, closedBy: by, day: dayKey(now), updatedAt: now, total: 0 }],
     ['update', 'tables', b.tableId, { status: 'empty', billId: null, openedAt: null }],
+    ...store.kitchenTickets.filter(ticket => ticket.billId === billId).map(ticket => [
+      'update', 'kitchen_tickets', ticket.id, { status: 'closed', closedAt: now, closedBy: by, updatedAt: now },
+    ]),
   ]);
 }
 

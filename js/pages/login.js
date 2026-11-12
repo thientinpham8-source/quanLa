@@ -1,7 +1,7 @@
 // ===== S01 – Đăng nhập: chọn vai trò -> mã PIN -> chọn tên =====
-import { db } from '../db.js';
-import { store, seedIfNeeded, startSync } from '../store.js';
-import { verifyPin, logout, ROLE_NAME } from '../auth.js';
+import { db } from '../db.js?v=1.0.59';
+import { store, seedIfNeeded, startSync } from '../store.js?v=1.0.59';
+import { verifyPin, logout, ROLE_NAME } from '../auth.js?v=1.0.59';
 import { icon, logo, toast } from '../ui.js';
 import { esc } from '../utils.js';
 
@@ -13,11 +13,12 @@ function render() {
   if (step === 'role') {
     inner = `
       <div class="role-grid">
-        <button class="role-card" data-role="order"><span class="ri">${icon('list')}</span><b>Order</b><span>Nhân viên phục vụ<br>gọi món tại bàn</span></button>
-        <button class="role-card cashier" data-role="cashier"><span class="ri">${icon('cash')}</span><b>Thu Ngân</b><span>Thanh toán, quản lý<br>& báo cáo</span></button>
+        <button class="card role-card" data-role="order"><span class="ri">${icon('list')}</span><b>Order</b><span>Nhân viên phục vụ<br>gọi món tại bàn</span></button>
+        <button class="card role-card cashier" data-role="cashier"><span class="ri">${icon('cash')}</span><b>Thu Ngân</b><span>Thanh toán, quản lý<br>& báo cáo</span></button>
+        <button class="card role-card kitchen" data-role="kitchen"><span class="ri">${icon('chef')}</span><b>Bếp</b><span>Nhận phiếu<br>và xác nhận món</span></button>
       </div>
       ${s.requirePin === false ? '<div class="notice warn mt">Đang tắt yêu cầu PIN: chọn vai trò sẽ đăng nhập ngay.</div>' : ''}
-      ${db.mode === 'local' ? `<div class="demo-hint">Chế độ demo · PIN Order <span class="kbd">111111</span> · Thu Ngân <span class="kbd">999999</span></div>` : ''}`;
+      ${db.mode === 'local' ? `<div class="demo-hint">Chế độ demo · PIN Order <span class="kbd">111111</span> · Thu Ngân <span class="kbd">999999</span> · Bếp <span class="kbd">888888</span></div>` : ''}`;
   } else if (step === 'pin') {
     inner = `
       <div class="center"><span class="pill ${role === 'cashier' ? 'st-waiting' : 'st-open'}">${ROLE_NAME[role]}</span>
@@ -25,7 +26,7 @@ function render() {
       <div class="pin-dots" id="dots">${Array.from({ length: 6 }, (_, i) => `<i class="${i < pin.length ? 'on' : ''}"></i>`).join('')}</div>
       <div class="pinpad">
         ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-k="${n}">${n}</button>`).join('')}
-        <button class="fn" data-k="back">${icon('back')} Quay lại</button><button data-k="0">0</button><button class="fn" data-k="del" aria-label="Xóa">⌫</button>
+        <button class="fn" data-k="back">${icon('back')} Quay lại</button><button data-k="0">0</button><button class="fn" data-k="del" aria-label="Xóa" title="Xóa ký tự">⌫</button>
       </div>`;
     if (db.mode === 'firebase') {
       inner += `<label class="remember-login"><input type="checkbox" id="rememberLogin" ${rememberLogin ? 'checked' : ''}><span><b>Giữ đăng nhập trên thiết bị này</b><small>Không lưu mã PIN. Tắt tùy chọn này nếu dùng thiết bị chung.</small></span></label>`;
@@ -41,7 +42,7 @@ async function submitPin() {
   try {
     await verifyPin(role, p, rememberLogin);
     if (db.mode === 'firebase' && role === 'cashier') await seedIfNeeded();
-    location.hash = '#/tables';
+    location.hash = role === 'kitchen' ? '#/kitchen' : '#/tables';
   } catch (e) {
     pin = ''; render();
     const d = el.querySelector('#dots'); d?.classList.add('shake');
@@ -68,7 +69,7 @@ export default {
       if (!t) return;
       if (t.dataset.role) {
         role = t.dataset.role;
-        if (store.settings.requirePin === false && db.mode === 'local') { store.user = { role, name: ROLE_NAME[role], at: Date.now() }; localStorage.setItem('ql_session', JSON.stringify(store.user)); startSync(); location.hash = '#/tables'; return; }
+        if (store.settings.requirePin === false && db.mode === 'local') { store.user = { role, name: ROLE_NAME[role], at: Date.now() }; localStorage.setItem('ql_session', JSON.stringify(store.user)); startSync(); location.hash = role === 'kitchen' ? '#/kitchen' : '#/tables'; return; }
         if (store.settings.requirePin === false && db.mode === 'firebase') { toast('Firebase vẫn yêu cầu PIN để xác thực tài khoản', 'warn'); }
         step = 'pin'; pin = ''; render();
       }

@@ -1,10 +1,10 @@
 // ===== Đăng nhập theo vai trò + mã PIN =====
-import { db } from './db.js';
-import { store, startSync, stopSync } from './store.js';
-import { resetWatch } from './notify.js';
+import { db } from './db.js?v=1.0.59';
+import { store, startSync, stopSync, clearSyncedData } from './store.js?v=1.0.59';
+import { resetWatch } from './notify.js?v=1.0.59';
 
 const KEY = 'ql_session';
-export const ROLE_NAME = { order: 'Order', cashier: 'Thu Ngân' };
+export const ROLE_NAME = { order: 'Order', cashier: 'Thu Ngân', kitchen: 'Bếp' };
 
 export function restore() {
   let s = null;
@@ -26,7 +26,8 @@ export async function logout() {
   stopSync(); resetWatch();
   try { await db.signOut(); } catch {}
   localStorage.removeItem(KEY);
-  store.user = null; store.bills = {}; store.unseen.clear();
+  store.user = null;
+  clearSyncedData();
   location.hash = '#/login';
 }
 

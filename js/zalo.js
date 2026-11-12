@@ -1,7 +1,7 @@
 // ===== Gửi thông tin lên nhóm Zalo =====
 //  Cách A (tự động): App -> Cloudflare Worker (giữ Bot Token) -> Zalo Bot API -> nhóm
 //  Cách B (1 chạm) : Nút chia sẻ của điện thoại / Sao chép dán vào Zalo PC
-import { store } from './store.js';
+import { store } from './store.js?v=1.0.59';
 import { modal, toast, icon } from './ui.js';
 import { esc } from './utils.js';
 import { printHTML, textToImage } from './bill.js';

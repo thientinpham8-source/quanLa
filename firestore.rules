@@ -3,14 +3,20 @@ rules_version = '2';
 // - Thu Ngân: toàn quyền
 // - Order: chỉ mở bàn, gọi thêm món, yêu cầu tính tiền, chuyển bàn, báo hết món
 //   KHÔNG được: sửa giá, xóa món đã gửi, thu tiền/chốt bill, sửa cài đặt, xem bộ đếm
+// - Bếp: chỉ đọc và cập nhật trạng thái phiếu bếp
 // Nhớ đổi email nếu bạn đổi trong js/config.js
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn()  { return request.auth != null; }
     function isCashier() { return signedIn() && request.auth.token.email == 'thungan@quanla.app'; }
     function isOrder()   { return signedIn() && request.auth.token.email == 'order@quanla.app'; }
+    function isKitchen() { return signedIn() && request.auth.token.email == 'bep@quanla.app'; }
     function staff()     { return isCashier() || isOrder(); }
     function onlyKeys(keys) { return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys); }
+    function activeBill(shopId, billId) {
+      let path = /databases/$(database)/documents/shops/$(shopId)/bills/$(billId);
+      return exists(path) && get(path).data.status in ['open', 'waiting'];
+    }
 
     match /shops/{shopId} {
       match /settings/{id}   { allow read: if staff(); allow write: if isCashier(); }
@@ -44,6 +50,55 @@ service cloud.firestore {
           && request.resource.data.items.size() >= resource.data.items.size()
         );
         allow delete: if isCashier() && resource.data.status in ['paid', 'cancelled', 'merged'];
+      }
+
+      match /kitchen_tickets/{id} {
+        allow read: if staff() || isKitchen();
+        allow create: if staff()
+          && request.resource.data.keys().hasAll(['billId', 'tableId', 'tableName', 'round', 'kind', 'items', 'status', 'createdAt', 'createdBy', 'updatedAt'])
+          && request.resource.data.keys().hasOnly(['billId', 'tableId', 'tableName', 'round', 'kind', 'items', 'status', 'createdAt', 'createdBy', 'updatedAt'])
+          && request.resource.data.billId is string
+          && request.resource.data.tableId is string
+          && request.resource.data.tableName is string
+          && request.resource.data.round is int
+          && request.resource.data.kind in ['order', 'additional']
+          && request.resource.data.items is list
+          && request.resource.data.items.size() > 0
+          && request.resource.data.status == 'waiting'
+          && request.resource.data.createdAt is int
+          && request.resource.data.createdBy is string
+          && request.resource.data.updatedAt is int
+          && activeBill(shopId, request.resource.data.billId);
+        allow update: if (
+            isKitchen()
+            && resource.data.status == 'waiting'
+            && request.resource.data.status == 'preparing'
+            && onlyKeys(['status', 'startedAt', 'startedBy', 'updatedAt'])
+          ) || (
+            isKitchen()
+            && resource.data.status == 'preparing'
+            && request.resource.data.status == 'ready'
+            && onlyKeys(['status', 'readyAt', 'readyBy', 'updatedAt'])
+          ) || (
+            staff()
+            && resource.data.status == 'ready'
+            && request.resource.data.status == 'served'
+            && onlyKeys(['status', 'servedAt', 'servedBy', 'updatedAt'])
+          ) || (
+            isCashier()
+            && resource.data.status in ['waiting', 'preparing', 'ready', 'served']
+            && request.resource.data.status == 'closed'
+            && onlyKeys(['status', 'closedAt', 'closedBy', 'updatedAt'])
+          ) || (
+            staff()
+            && request.resource.data.status == resource.data.status
+            && onlyKeys(['billId', 'tableId', 'tableName', 'updatedAt'])
+          ) || (
+            staff()
+            && resource.data.status in ['waiting', 'preparing', 'ready']
+            && request.resource.data.status in [resource.data.status, 'cancelled']
+            && onlyKeys(['items', 'status', 'updatedAt'])
+          );
       }
     }
   }

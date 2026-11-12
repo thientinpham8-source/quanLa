@@ -1,9 +1,9 @@
 // ===== Quản lý Tồn kho (Bia - Nước ngọt) – Thu ngân =====
-import { store } from '../store.js';
-import { db } from '../db.js';
+import { store } from '../store.js?v=1.0.59';
+import { db } from '../db.js?v=1.0.59';
 import { icon, setTitle, toast, modal, confirmBox } from '../ui.js';
 import { esc, num, money, norm, dayKey, download, fmtDT } from '../utils.js';
-import { isTrackedItem, defaultUnit, formatStockQty, importStock, adjustStock } from '../actions.js';
+import { isTrackedItem, defaultUnit, formatStockQty, importStock, adjustStock } from '../actions.js?v=1.0.59';
 
 let el;
 let filter = 'all_drinks'; // 'all_drinks' | 'beer' | 'soft_drink' | 'low_stock'
@@ -175,7 +175,7 @@ async function showImportModal(targetId = null) {
         </select>
       </label>
 
-      <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="grid-2">
         <label class="field">
           <span>Số thùng / két (x24)</span>
           <input class="input" type="number" id="impPacks" min="0" placeholder="0" value="0">
@@ -186,9 +186,9 @@ async function showImportModal(targetId = null) {
         </label>
       </div>
 
-      <div class="calc-preview-box" id="impPreview" style="background:var(--brand-50);border:1px dashed var(--brand);border-radius:10px;padding:10px 14px">
+      <div class="calc-preview-box" id="impPreview">
         <span class="small muted">Tổng số lượng cộng vào kho:</span>
-        <div style="font-size:18px;font-weight:750;color:var(--brand);margin-top:2px" id="impTotalText">0 lon/chai</div>
+        <div class="calc-preview-total" id="impTotalText">0 lon/chai</div>
       </div>
 
       <label class="field">
@@ -262,14 +262,14 @@ async function showAdjustModal(itemId) {
   await modal({
     title: `Kiểm kê – ${esc(m.name)}`,
     body: `<div class="stack">
-      <div style="background:var(--surface-2);border-radius:10px;padding:12px;display:flex;justify-content:space-between;align-items:center">
+      <div class="stock-summary">
         <div>
           <span class="xs muted">Tồn sổ sách hiện tại</span>
-          <div style="font-size:18px;font-weight:700">${current} ${unit}</div>
+          <div class="stock-summary-value">${current} ${unit}</div>
         </div>
-        <div style="text-align:right">
+        <div class="stock-summary-detail">
           <span class="xs muted">Quy đổi</span>
-          <div style="font-weight:600">${formatStockQty(current, packSize, unit).packText}</div>
+          <div class="bold">${formatStockQty(current, packSize, unit).packText}</div>
         </div>
       </div>
 
@@ -278,7 +278,7 @@ async function showAdjustModal(itemId) {
         <input class="input" type="number" id="adjActual" value="${current}" autofocus>
       </label>
 
-      <div id="adjDiffBox" style="padding:10px 14px;border-radius:10px;font-size:14px;font-weight:600"></div>
+      <div id="adjDiffBox" class="inventory-diff"></div>
 
       <label class="field">
         <span>Lý do điều chỉnh / Ghi chú kiểm kho</span>
@@ -293,17 +293,13 @@ async function showAdjustModal(itemId) {
       const updateDiff = () => {
         const val = Number(actualInput.value);
         const diff = val - current;
+        diffBox.classList.toggle('is-increased', diff > 0);
+        diffBox.classList.toggle('is-decreased', diff < 0);
         if (diff === 0) {
-          diffBox.style.background = 'var(--surface-2)';
-          diffBox.style.color = 'var(--text)';
           diffBox.innerHTML = `${icon('check')} Số lượng khớp với sổ sách (không lệch)`;
         } else if (diff > 0) {
-          diffBox.style.background = 'var(--brand-50)';
-          diffBox.style.color = 'var(--brand)';
           diffBox.innerHTML = `Lệch: <b>+${diff} ${unit}</b> (Thừa so với sổ sách)`;
         } else {
-          diffBox.style.background = 'var(--danger-50)';
-          diffBox.style.color = 'var(--danger)';
           diffBox.innerHTML = `Lệch: <b>${diff} ${unit}</b> (Thiếu hụt so với sổ sách)`;
         }
       };
@@ -338,14 +334,14 @@ async function showLogsModal() {
     wide: true,
     body: `<div class="stack">
       <p class="small muted">Lưu tối đa 300 giao dịch xuất bán từ hóa đơn, nhập kho từ đại lý và điều chỉnh kiểm kê.</p>
-      <div style="max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:10px">
-        <table class="excel-table logs-table" style="width:100%;font-size:13px">
+      <div class="inventory-log-scroll">
+        <table class="excel-table logs-table">
           <thead>
             <tr>
-              <th style="width:120px">Thời gian</th>
-              <th style="width:90px">Loại</th>
+              <th>Thời gian</th>
+              <th>Loại</th>
               <th>Mặt hàng</th>
-              <th style="text-align:right;width:100px">Số lượng</th>
+              <th class="numeric">Số lượng</th>
               <th>Người thực hiện</th>
               <th>Ghi chú / Mã đơn</th>
             </tr>
@@ -365,10 +361,10 @@ async function showLogsModal() {
               const qtyDisplay = isSale || isImp ? `${qtyPrefix}${num(l.qty)} ${l.unit || 'lon'}` : `${l.newStock} ${l.unit || 'lon'} (${l.diff > 0 ? '+' : ''}${l.diff})`;
 
               return `<tr>
-                <td class="muted">${fmtDT(l.at)}</td>
+                <td class="muted date-cell">${fmtDT(l.at)}</td>
                 <td>${badge}</td>
                 <td><b>${esc(l.name)}</b></td>
-                <td style="text-align:right" class="${qtyColor}"><b>${qtyDisplay}</b></td>
+                <td class="numeric ${qtyColor}"><b>${qtyDisplay}</b></td>
                 <td>${esc(l.by || 'Hệ thống')}</td>
                 <td class="muted">${esc(l.billCode ? `HĐ: ${l.billCode}` : l.note || '-')}</td>
               </tr>`;
@@ -419,7 +415,7 @@ async function showAddTrackedItemModal() {
         <span>Tên mặt hàng</span>
         <input class="input" id="newItemName" placeholder="VD: Bia 333 Lon, Nước tăng lực RedBull..." autofocus>
       </label>
-      <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="grid-2">
         <label class="field">
           <span>Giá bán (VNĐ)</span>
           <input class="input money" id="newPrice" type="number" placeholder="VD: 15000">
@@ -433,7 +429,7 @@ async function showAddTrackedItemModal() {
           </select>
         </label>
       </div>
-      <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="grid-2">
         <label class="field">
           <span>Số lon/chai mỗi thùng</span>
           <input class="input" type="number" id="newPack" value="24">

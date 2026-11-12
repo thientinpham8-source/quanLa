@@ -1,5 +1,5 @@
 // ===== C04 – Báo cáo doanh thu =====
-import { db } from '../db.js';
+import { db } from '../db.js?v=1.0.59';
 import { icon, setTitle, toast } from '../ui.js';
 import { esc, money, short, dayKey, addDays, fmtDay, download, fmtDT } from '../utils.js';
 import { reportText, reportPrintHTML, printHTML, liveItems, payLabel } from '../bill.js';

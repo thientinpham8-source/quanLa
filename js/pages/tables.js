@@ -1,9 +1,9 @@
 // ===== O01 / C01 – Sơ đồ bàn (+ bảng điều khiển thu ngân) =====
-import { store, billOfTable, tableById } from '../store.js';
+import { store, billOfTable, tableById } from '../store.js?v=1.0.59';
 import { icon, toast, pickBox, confirmBox, setTitle } from '../ui.js';
 import { esc, short, minutesSince, dur } from '../utils.js';
 import { calc } from '../bill.js';
-import { moveTable, mergeBills } from '../actions.js';
+import { moveTable, mergeBills, serveReadyKitchenTickets } from '../actions.js?v=1.0.59';
 
 let el, area = localStorage.getItem('ql_area') || 'all', tick, selectedTableId = null, statusFilter = 'all';
 
@@ -14,9 +14,13 @@ function tableCard(t) {
   const min = b ? minutesSince(b.openedAt) : 0;
   const long = b && min >= (store.settings.longSitMinutes || 120);
   const isNew = b && store.unseen.has(b.id) && store.user.role === 'cashier';
-  return `<div class="tcard st-${st} ${long ? 'long' : ''} ${selectedTableId === t.id ? 'selected' : ''}" data-id="${t.id}">
+  const readyTickets = b ? store.kitchenTickets.filter(ticket => ticket.billId === b.id) : [];
+  const kitchenReady = readyTickets.length > 0 && readyTickets.every(ticket => ticket.status === 'ready');
+  const statusLabel = st === 'empty' ? 'trống' : st === 'waiting' ? 'chờ thanh toán' : kitchenReady ? 'đủ món' : 'đang phục vụ';
+  return `<div class="card tcard st-${st} ${long ? 'long' : ''} ${selectedTableId === t.id ? 'selected' : ''}" data-id="${t.id}">
     ${isNew ? '<span class="new-dot" aria-label="Có cập nhật mới"></span>' : ''}
-    <button class="tc-main" aria-label="${esc(t.name)}: ${st === 'empty' ? 'trống' : st === 'waiting' ? 'chờ thanh toán' : 'đang phục vụ'}">
+    ${kitchenReady ? `<button class="kitchen-ready-check" data-act="serve-kitchen" data-id="${b.id}" title="Đã mang món ra" aria-label="Xác nhận đã mang món ra ${esc(t.name)}">${icon('check')}</button>` : ''}
+    <button class="tc-main" aria-label="${esc(t.name)}: ${statusLabel}">
       <span class="tc-top"><span class="tc-name">${esc(t.name)}</span></span>
       <span class="tc-mid">${b ? (c.count ? short(c.total) : 'Mới mở') : 'Trống'}</span>
       <span class="tc-bot">${!b ? 'Sẵn sàng' : st === 'waiting' ? `<b class="text-accent">${icon('cash')} Chờ thanh toán</b>` : `${icon('clock')}${dur(min)} · ${c.count} món`}</span>
@@ -88,8 +92,8 @@ function queueHTML() {
   return `<div class="queue">
     <div class="card revenue-card"><div class="small muted">Doanh thu hôm nay</div><div class="rv">${money(revenue)}</div>
       <div class="xs muted">${paid.length} bill đã thanh toán</div></div>
-    <div class="section-title" style="margin-top:6px">Chờ thanh toán (${waiting.length})</div>
-    ${waiting.length ? waiting.map(item).join('') : `<div class="card empty small" style="padding:18px">Chưa có bàn yêu cầu tính tiền</div>`}
+    <div class="section-title section-title-compact">Chờ thanh toán (${waiting.length})</div>
+    ${waiting.length ? waiting.map(item).join('') : `<div class="card empty empty-compact small">Chưa có bàn yêu cầu tính tiền</div>`}
     ${bills.length > waiting.length ? `<div class="section-title">Đang phục vụ (${bills.length - waiting.length})</div>${bills.filter(b => b.status !== 'waiting').map(item).join('')}` : ''}
   </div>`;
 }
@@ -112,7 +116,7 @@ function render() {
           <div class="stats">
             <button type="button" class="stat ${statusFilter === 'empty' ? 'active' : ''}" data-status="empty" aria-pressed="${statusFilter === 'empty'}"><i class="dot d-empty"></i>Trống ${counts.empty}</button>
             <button type="button" class="stat ${statusFilter === 'serving' ? 'active' : ''}" data-status="serving" aria-pressed="${statusFilter === 'serving'}"><i class="dot d-serving"></i>Có khách ${counts.serving}</button>
-            <button type="button" class="stat ${statusFilter === 'waiting' ? 'active' : ''}" data-status="waiting" aria-pressed="${statusFilter === 'waiting'}"><i class="dot d-waiting"></i>Đủ món ${counts.waiting}</button>
+            <button type="button" class="stat ${statusFilter === 'waiting' ? 'active' : ''}" data-status="waiting" aria-pressed="${statusFilter === 'waiting'}"><i class="dot d-waiting"></i>Chờ thanh toán ${counts.waiting}</button>
           </div>
         </div>
         ${showArea ? `<div class="chips mb">
@@ -133,6 +137,16 @@ export default {
     if (area !== 'all' && !store.areas.some(a => a.id === area)) area = 'all';
     render();
     const onClick = e => {
+      const ready = e.target.closest('[data-act="serve-kitchen"]');
+      if (ready) {
+        e.stopPropagation();
+        const bill = store.bills[ready.dataset.id];
+        if (!bill) return;
+        serveReadyKitchenTickets(bill.id, store.user.name)
+          .then(count => { selectedTableId = null; toast(`Đã xác nhận mang ${count} phiếu món ra`); render(); })
+          .catch(error => toast(error.message || 'Không thể xác nhận món đã mang ra', 'err'));
+        return;
+      }
       const s = e.target.closest('[data-status]');
       if (s) { statusFilter = statusFilter === s.dataset.status ? 'all' : s.dataset.status; selectedTableId = null; return render(); }
       const a = e.target.closest('[data-area]');
@@ -157,6 +171,6 @@ export default {
   },
   update(keys) {
     if (selectedTableId && !store.tables.some(t => t.id === selectedTableId)) selectedTableId = null;
-    if (['tables', 'bills', 'areas', 'today', 'unseen', 'settings'].some(k => keys.has(k))) render();
+    if (['tables', 'bills', 'areas', 'today', 'unseen', 'settings', 'kitchenTickets'].some(k => keys.has(k))) render();
   },
 };

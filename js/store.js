@@ -1,5 +1,5 @@
 // ===== Trạng thái dùng chung + đồng bộ realtime =====
-import { db } from './db.js';
+import { db } from './db.js?v=1.0.59';
 import { dayKey, hashPin } from './utils.js';
 
 export const DEFAULT_SETTINGS = {
@@ -29,6 +29,7 @@ export const store = {
   settings: structuredClone(DEFAULT_SETTINGS),
   areas: [], tables: [], categories: [], menu: [],
   bills: {},          // bill đang mở (open / waiting)
+  kitchenTickets: [],
   todayBills: [],     // bill đã đóng hôm nay (thu ngân)
   loaded: new Set(),
   unseen: new Set(),  // bill có cập nhật mới chưa xem (thu ngân)
@@ -54,17 +55,43 @@ function deepMerge(base, over) {
   return out;
 }
 const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || String(a.name).localeCompare(String(b.name), 'vi', { numeric: true });
+export const KITCHEN_TICKET_STATUSES = ['waiting', 'preparing', 'ready'];
 
 let unsubs = [];
+export function clearSyncedData() {
+  store.settings = structuredClone(DEFAULT_SETTINGS);
+  store.settingsExists = false;
+  store.areas = [];
+  store.tables = [];
+  store.categories = [];
+  store.menu = [];
+  store.bills = {};
+  store.kitchenTickets = [];
+  store.todayBills = [];
+  store.loaded.clear();
+  store.unseen.clear();
+}
+
 export function startSync() {
   stopSync();
+  clearSyncedData();
   const w = (col, key, sort = byOrder) => db.watch(col, [], list => { store[key] = list.sort(sort); store.loaded.add(key); emit(key); });
+  const watchKitchenTickets = () => db.watch('kitchen_tickets', [['status', 'in', KITCHEN_TICKET_STATUSES]], list => {
+    store.kitchenTickets = list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    store.loaded.add('kitchenTickets');
+    emit('kitchenTickets');
+  });
+  if (store.user?.role === 'kitchen') {
+    unsubs.push(watchKitchenTickets());
+    return;
+  }
   unsubs.push(
     db.watchDoc('settings', 'main', d => { store.settings = deepMerge(DEFAULT_SETTINGS, d); store.loaded.add('settings'); store.settingsExists = !!d; emit('settings'); }),
     w('areas', 'areas'), w('tables', 'tables'), w('categories', 'categories'), w('menu', 'menu'),
     db.watch('bills', [['status', 'in', ['open', 'waiting']]], list => {
       const m = {}; list.forEach(b => (m[b.id] = b)); store.bills = m; store.loaded.add('bills'); emit('bills');
     }),
+    watchKitchenTickets(),
   );
   if (store.user?.role === 'cashier') {
     unsubs.push(db.watch('bills', [['day', '==', dayKey()]], list => { store.todayBills = list; emit('today'); }));
@@ -79,6 +106,9 @@ export const menuById = id => store.menu.find(m => m.id === id);
 /* ---------- Khởi tạo dữ liệu ban đầu ---------- */
 export async function seedIfNeeded() {
   const s = await db.get('settings', 'main');
+  if (s && db.mode === 'local' && !s.pins?.kitchen) {
+    await db.update('settings', 'main', { pins: { ...(s.pins || {}), kitchen: hashPin('888888') } });
+  }
   if (s?.menuVersion >= 3 && s?.staffVersion >= 1) return false;
   if (s?.menuVersion >= 3) {
     const cleanup = (await db.list('staff')).map(x => ['remove', 'staff', x.id]);
@@ -89,7 +119,7 @@ export async function seedIfNeeded() {
   const ops = [];
   if (!s) {
     const settings = structuredClone(DEFAULT_SETTINGS);
-    if (db.mode === 'local') settings.pins = { order: hashPin('111111'), cashier: hashPin('999999') };
+    if (db.mode === 'local') settings.pins = { order: hashPin('111111'), cashier: hashPin('999999'), kitchen: hashPin('888888') };
     ops.push(['set', 'settings', 'main', settings]);
     ops.push(['set', 'counters', 'bill', { day: '', seq: 0 }]);
     ops.push(['set', 'areas', 'a1', { name: 'Trong nhà', order: 1 }]);
@@ -171,7 +201,7 @@ export async function seedIfNeeded() {
   }
   ops.push(s
     ? ['update', 'settings', 'main', { menuVersion: 3, staffVersion: 1 }]
-    : ['set', 'settings', 'main', { ...DEFAULT_SETTINGS, ...(db.mode === 'local' ? { pins: { order: hashPin('111111'), cashier: hashPin('999999') } } : {}), menuVersion: 3, staffVersion: 1 }]);
+    : ['set', 'settings', 'main', { ...DEFAULT_SETTINGS, ...(db.mode === 'local' ? { pins: { order: hashPin('111111'), cashier: hashPin('999999'), kitchen: hashPin('888888') } } : {}), menuVersion: 3, staffVersion: 1 }]);
   await db.batch(ops);
   return !s;
 }

@@ -1,9 +1,9 @@
 // ===== Danh sách đơn đang mở (Order: theo dõi · Thu ngân: hàng đợi thanh toán) =====
-import { store } from '../store.js';
+import { store } from '../store.js?v=1.0.59';
 import { icon, setTitle, toast, promptBox } from '../ui.js';
 import { esc, money, fmtTime, minutesSince, dur } from '../utils.js';
 import { calc, rounds, kitchenText } from '../bill.js';
-import { voidItem } from '../actions.js';
+import { voidItem } from '../actions.js?v=1.0.59';
 import { deliver } from '../zalo.js';
 
 let el, filter = 'all', expandedBillId = null;
@@ -36,7 +36,7 @@ function render() {
       </div>` : '';
       return `<div class="card card-pad order-pay-card ${b.status === 'waiting' ? 'waiting' : ''}">
         <div class="row-between">
-          <div class="row"><b style="font-size:18px">${esc(b.tableName)}</b>
+          <div class="row"><b class="order-table-name">${esc(b.tableName)}</b>
             <span class="pill st-${b.status}">${b.status === 'waiting' ? 'Chờ thanh toán' : 'Đang phục vụ'}</span>
             ${isCashier && store.unseen.has(b.id) ? '<span class="pill st-cancelled">Mới</span>' : ''}</div>
           <span class="pill"><b>${c.count}</b> món</span>
@@ -45,12 +45,12 @@ function render() {
         <div class="order-card-foot">
           <div class="row-between order-card-total">
             <span class="xs muted">Tổng tiền</span>
-            <b class="num" style="font-size:20px;color:var(--brand)">${money(c.total)}</b>
+            <b class="num order-total">${money(c.total)}</b>
           </div>
           <div class="btn-row order-card-actions">
             <button class="btn btn-sm" data-toggle-bill="${esc(b.id)}">${icon(expandedBillId === b.id ? 'up' : 'down')} ${expandedBillId === b.id ? 'Ẩn đơn' : 'Xem đơn'}</button>
             <a class="btn btn-sm" href="#/order/${b.tableId}">${icon('plus')} Gọi món</a>
-            ${isCashier ? `<a class="btn btn-sm ${b.status === 'waiting' ? 'btn-accent' : 'btn-primary'}" href="#/bill/${b.id}">${icon('cash')} Thanh toán</a>` : ''}
+            ${isCashier ? `<a class="btn btn-sm btn-primary" href="#/bill/${b.id}">${icon('cash')} Thanh toán</a>` : ''}
           </div>
         </div>
         ${details}

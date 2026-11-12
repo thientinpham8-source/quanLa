@@ -1,6 +1,6 @@
 // ===== C05–C08 – Quản lý: thực đơn, bàn, nhân viên, cài đặt =====
-import { db } from '../db.js';
-import { store, billOfTable, DEFAULT_SETTINGS } from '../store.js';
+import { db } from '../db.js?v=1.0.59';
+import { store, billOfTable, DEFAULT_SETTINGS } from '../store.js?v=1.0.59';
 import { icon, toast, modal, confirmBox, promptBox, setTitle } from '../ui.js';
 import { esc, money, num, parseMoney, download, clone, norm } from '../utils.js';
 import { BANKS, vietQR } from '../bill.js';
@@ -13,7 +13,8 @@ const categoryHue = index => `hsl(${(210 + index * 7) % 360} 42% 42%)`;
 
 /* ================= THỰC ĐƠN ================= */
 function menuPageData() {
-  const matches = menuQuery ? store.menu.filter(m => norm(m.name).includes(norm(menuQuery))) : store.menu;
+  const query = norm(menuQuery);
+  const matches = query ? store.menu.filter(m => norm(m.name).includes(query)) : store.menu;
   const pages = store.categories.filter(c => matches.some(m => m.categoryId === c.id)).map(c => ({ id: c.id, name: c.name }));
   const orphan = matches.filter(m => !store.categories.some(c => c.id === m.categoryId));
   if (orphan.length) pages.push({ id: null, name: 'Chưa phân loại' });
@@ -22,6 +23,7 @@ function menuPageData() {
 function menuHTML() {
   const cats = store.categories;
   const { matches, pages, orphan } = menuPageData();
+  const searching = !!norm(menuQuery);
   menuPage = Math.max(0, Math.min(menuPage, pages.length - 1));
   const page = pages[menuPage];
   const shortcutStart = Math.max(0, Math.min(menuPage - 3, pages.length - 7));
@@ -31,19 +33,26 @@ function menuHTML() {
     return `<div class="card mb admin-menu-card">
     <div class="card-h"><h3 class="category-heading" style="--category-color:${hue}">${esc(c ? c.name : 'Chưa phân loại')} <span class="muted xs">(${items.length})</span></h3>
       ${c ? `<div class="row"><button class="icon-btn sm" data-a="catUp" data-id="${c.id}" title="Lên">${icon('up')}</button><button class="icon-btn sm" data-a="catEdit" data-id="${c.id}" title="Đổi tên">${icon('edit')}</button><button class="icon-btn sm danger" data-a="catDel" data-id="${c.id}" title="Xóa">${icon('trash')}</button></div>` : ''}</div>
-    <div class="list admin-menu-items" style="margin-top:8px">${items.map(m => `<div class="admin-row">
+    <div class="list admin-menu-items">${items.map(m => `<div class="admin-row">
       <div class="ar-main"><b>${esc(m.name)}</b><span class="small muted">${m.price > 0 ? money(m.price) : esc(m.priceLabel || 'Chưa có giá')}${m.priceNote ? ` · ${esc(m.priceNote)}` : ''}</span></div>
       <label class="switch" title="Còn / hết món"><input type="checkbox" data-a="avail" data-id="${m.id}" ${m.available !== false ? 'checked' : ''}><span></span></label>
       <button class="icon-btn sm" data-a="itemEdit" data-id="${m.id}">${icon('edit')}</button>
       <button class="icon-btn sm danger" data-a="itemDel" data-id="${m.id}">${icon('trash')}</button>
     </div>`).join('') || '<div class="admin-row muted small">Chưa có món</div>'}</div></div>`;
   };
+  const searchResults = matches.length
+    ? `<div class="menu-search-results">
+        <div class="small muted" aria-live="polite">Tìm thấy ${matches.length} món</div>
+        ${cats.filter(c => matches.some(m => m.categoryId === c.id)).map(c => group(c, matches.filter(m => m.categoryId === c.id))).join('')}
+        ${orphan.length ? group(null, orphan) : ''}
+      </div>`
+    : '<div class="empty">Không tìm thấy món phù hợp</div>';
   return `<div class="menu-admin-toolbar mb"><div class="menu-admin-actions"><button class="btn btn-primary" data-a="itemAdd">${icon('plus')} Thêm món</button><button class="btn btn-primary" data-a="catAdd">${icon('layers')} Thêm danh mục</button></div>
-    <div class="category-shortcuts">${visibleCategories.filter(c => c.id).map(c => { const i = cats.findIndex(x => x.id === c.id); return `<button class="category-shortcut ${page?.id === c.id ? 'active' : ''}" style="--category-color:${categoryHue(i)}" data-a="catPage" data-id="${c.id}">${esc(c.name)}</button>`; }).join('')}</div>
+    ${!searching ? `<div class="category-shortcuts">${visibleCategories.filter(c => c.id).map(c => { const i = cats.findIndex(x => x.id === c.id); return `<button class="category-shortcut ${page?.id === c.id ? 'active' : ''}" style="--category-color:${categoryHue(i)}" data-a="catPage" data-id="${c.id}">${esc(c.name)}</button>`; }).join('')}</div>` : ''}
     </div>
     <div class="searchbox menu-admin-search">${icon('search')}<input class="input" id="menuSearch" type="search" placeholder="Tìm món trong toàn bộ thực đơn…" value="${esc(menuQuery)}" autocomplete="off"></div>
-    ${page ? group(page.id ? cats.find(c => c.id === page.id) : null, page.id ? matches.filter(m => m.categoryId === page.id) : orphan) : menuQuery ? '<div class="empty">Không tìm thấy món phù hợp</div>' : '<div class="empty">Chưa có danh mục thực đơn</div>'}
-    ${pages.length > 1 ? `<div class="menu-page-nav admin-menu-page mb">
+    ${searching ? searchResults : page ? group(page.id ? cats.find(c => c.id === page.id) : null, page.id ? matches.filter(m => m.categoryId === page.id) : orphan) : '<div class="empty">Chưa có danh mục thực đơn</div>'}
+    ${!searching && pages.length > 1 ? `<div class="menu-page-nav admin-menu-page mb">
       <button class="icon-btn" data-a="menuPrev" aria-label="Danh mục trước" ${menuPage <= 0 ? 'disabled' : ''}>${icon('back')}</button>
       <div class="menu-page-label"><small>${menuPage + 1} / ${pages.length}</small></div>
       <button class="icon-btn" data-a="menuNext" aria-label="Danh mục tiếp" ${menuPage >= pages.length - 1 ? 'disabled' : ''}>${icon('next')}</button>
@@ -79,11 +88,11 @@ async function itemForm(m = {}) {
 function tablesHTML() {
   return `<div class="settings-grid">
     <div class="card"><div class="card-h"><h3>Khu vực</h3><button class="btn btn-sm btn-soft" data-a="areaAdd">${icon('plus')} Thêm</button></div>
-      <div class="list" style="margin-top:8px">${store.areas.map(a => `<div class="admin-row"><div class="ar-main"><b>${esc(a.name)}</b><span class="xs muted">${store.tables.filter(t => t.areaId === a.id).length} bàn</span></div>
+      <div class="list">${store.areas.map(a => `<div class="admin-row"><div class="ar-main"><b>${esc(a.name)}</b><span class="xs muted">${store.tables.filter(t => t.areaId === a.id).length} bàn</span></div>
         <button class="icon-btn sm" data-a="areaEdit" data-id="${a.id}">${icon('edit')}</button><button class="icon-btn sm danger" data-a="areaDel" data-id="${a.id}">${icon('trash')}</button></div>`).join('') || '<div class="admin-row muted small">Chưa có khu vực</div>'}</div></div>
     <div class="card"><div class="card-h"><h3>Bàn (${store.tables.length})</h3>
         <div class="row"><button class="btn btn-sm btn-soft" data-a="tableAdd">${icon('plus')} 1 bàn</button><button class="btn btn-sm" data-a="tableBulk">+ Nhiều bàn</button></div></div>
-      <div class="list" style="margin-top:8px">${store.tables.map(t => `<div class="admin-row">
+      <div class="list">${store.tables.map(t => `<div class="admin-row">
         <div class="ar-main"><b>${esc(t.name)}</b><span class="xs muted">${esc(store.areas.find(a => a.id === t.areaId)?.name || 'Chưa có khu vực')}${billOfTable(t) ? ' · <span class="text-brand">đang có khách</span>' : ''}</span></div>
         <button class="icon-btn sm" data-a="tableEdit" data-id="${t.id}">${icon('edit')}</button><button class="icon-btn sm danger" data-a="tableDel" data-id="${t.id}">${icon('trash')}</button></div>`).join('')}</div></div>
   </div>`;
@@ -123,7 +132,7 @@ function settingsHTML() {
     <div class="card card-pad stack" data-settings-panel="shop" ${settingsSubtab === 'shop' ? '' : 'hidden'}><h3>${icon('qr')} Chuyển khoản (VietQR)</h3>
       <label class="field"><span>Ngân hàng</span><select class="input" data-k="bank.bin"><option value="">— Chọn ngân hàng —</option>${BANKS.map(([bin, n]) => `<option value="${bin}" ${bin === b.bin ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
       <label class="field"><span>Số tài khoản</span><input class="input" data-k="bank.accountNo" value="${esc(b.accountNo)}" inputmode="numeric"></label>
-      <label class="field"><span>Tên chủ tài khoản (KHÔNG DẤU)</span><input class="input" data-k="bank.accountName" value="${esc(b.accountName)}" placeholder="NGUYEN VAN A" style="text-transform:uppercase"></label>
+      <label class="field"><span>Tên chủ tài khoản (KHÔNG DẤU)</span><input class="input uppercase" data-k="bank.accountName" value="${esc(b.accountName)}" placeholder="NGUYEN VAN A"></label>
       <button class="btn btn-soft" data-a="qrTest">${icon('qr')} Xem thử mã QR 10.000đ</button>
     </div>
 

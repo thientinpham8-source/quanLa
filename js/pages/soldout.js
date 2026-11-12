@@ -1,8 +1,8 @@
 // ===== Báo hết món (Order & Thu ngân) =====
-import { store } from '../store.js';
+import { store } from '../store.js?v=1.0.59';
 import { icon, setTitle, toast } from '../ui.js';
 import { esc, money, norm } from '../utils.js';
-import { setAvailable } from '../actions.js';
+import { setAvailable } from '../actions.js?v=1.0.59';
 
 let el, q = '';
 function render() {
@@ -10,8 +10,8 @@ function render() {
   const sold = store.menu.filter(m => m.available === false).length;
   el.querySelector('#slist').innerHTML = store.categories.map(c => {
     const items = store.menu.filter(m => m.categoryId === c.id && (!nq || norm(m.name).includes(nq)));
-    return items.length ? `<div class="section-title">${esc(c.name)}</div><div class="card">${items.map(m => `
-      <div class="admin-row"><div class="ar-main"><b style="${m.available === false ? 'text-decoration:line-through;color:var(--muted)' : ''}">${esc(m.name)}</b><span class="xs muted">${m.price > 0 ? money(m.price) : esc(m.priceLabel || 'Chưa có giá')}</span></div>
+    return items.length ? `<div class="section-title">${esc(c.name)}</div><div class="card card-list">${items.map(m => `
+      <div class="admin-row"><div class="ar-main"><b class="${m.available === false ? 'sold-out' : ''}">${esc(m.name)}</b><span class="xs muted">${m.price > 0 ? money(m.price) : esc(m.priceLabel || 'Chưa có giá')}</span></div>
       <span class="pill ${m.available === false ? 'st-cancelled' : 'st-open'}">${m.available === false ? 'Hết' : 'Còn'}</span>
       <label class="switch"><input type="checkbox" data-id="${m.id}" ${m.available !== false ? 'checked' : ''}><span></span></label></div>`).join('')}</div>` : '';
   }).join('');

@@ -1,9 +1,9 @@
 // ===== C02 – Chi tiết bill & thanh toán (giảm giá, phụ thu, tiền mặt / QR chuyển khoản) =====
-import { store, emit } from '../store.js';
+import { store, emit } from '../store.js?v=1.0.59';
 import { icon, toast, modal, confirmBox, promptBox, pickBox, setTitle } from '../ui.js';
 import { esc, money, num, parseMoney, fmtTime, debounce } from '../utils.js';
 import { calc, rounds, adjLabel, vietQR, qrInfo, bankName, billText, billPrintHTML, printHTML, kitchenText, payLabel } from '../bill.js?v=1.0.40';
-import { voidItem, increaseBillItem, saveAdjust, completePayment, cancelBill, mergeBills, moveTable, reopenBill } from '../actions.js';
+import { voidItem, increaseBillItem, saveAdjust, completePayment, cancelBill, mergeBills, moveTable, reopenBill } from '../actions.js?v=1.0.59';
 import { deliver, shareSheet, autoReady } from '../zalo.js';
 
 let el, billId, draft, done = false;
@@ -54,7 +54,7 @@ function skeleton() {
       <section class="stack pay-side">
         <div class="card card-pad stack-sm pay-summary-card">
           <div id="adjust"></div>
-          <div class="divider" style="margin:4px 0"></div>
+          <div class="divider divider-compact"></div>
           <div id="sum" class="stack-sm"></div>
         </div>
         <div class="card card-pad stack-sm" id="method"></div>
@@ -70,13 +70,13 @@ function renderItems() {
   const box = el.querySelector('#items');
   if (!b.items?.length) { box.innerHTML = `<div class="empty small">Chưa có món</div>`; return; }
   box.innerHTML = rounds(b).map(r => `
-    <div class="xs muted bold" style="margin-top:6px">LẦN ${r.round} · ${fmtTime(r.at)} · ${esc(r.by || '')}</div>
+    <div class="xs muted bold round-label">LẦN ${r.round} · ${fmtTime(r.at)} · ${esc(r.by || '')}</div>
     ${r.items.map(it => `<div class="sline ${it.void ? 'void' : ''}">
       ${it.void ? `<span class="sq">${it.qty}</span>` : `<div class="qty bill-qty"><button data-act="decQty" data-id="${it.id}" aria-label="Bớt một ${esc(it.name)}">${icon('minus')}</button><span>${it.qty}</span><button data-act="incQty" data-id="${it.id}" aria-label="Thêm một ${esc(it.name)}">${icon('plus')}</button></div>`}
-      <span class="sn"><b style="font-weight:650">${esc(it.name)}</b> <span class="xs muted">× ${num(it.price)}</span>
+      <span class="sn"><b class="bold">${esc(it.name)}</b> <span class="xs muted">× ${num(it.price)}</span>
         ${it.note ? `<small>${esc(it.note)}</small>` : ''}${it.void ? `<small>Hủy: ${esc(it.voidReason || '')} (${esc(it.voidBy || '')})</small>` : ''}</span>
       <span class="sm">${money(it.qty * it.price)}</span>
-      ${it.void ? '<span style="width:34px"></span>' : `<button class="icon-btn sm danger" data-act="void" data-id="${it.id}" aria-label="Hủy món">${icon('x')}</button>`}
+      ${it.void ? '<span class="void-spacer"></span>' : `<button class="icon-btn sm danger" data-act="void" data-id="${it.id}" aria-label="Hủy món">${icon('x')}</button>`}
     </div>`).join('')}`).join('');
 }
 
@@ -151,10 +151,10 @@ function updateDynamic() {
     const b = bill(), bk = store.settings.bank;
     const url = vietQR(amt, qrInfo(b));
     qr.innerHTML = url ? `<img src="${url}" alt="Mã QR chuyển khoản" loading="lazy">
-      <div class="bold" style="font-size:20px">${money(amt)}</div>
+      <div class="bold amount-highlight">${money(amt)}</div>
       <div class="small">${esc(bankName(bk.bin))} · <b>${esc(bk.accountNo)}</b><br>${esc(bk.accountName)}</div>
-      <div class="xs" style="color:#666">Nội dung: ${esc(qrInfo(b))}</div>`
-      : `<div class="notice warn" style="text-align:left">${icon('alert')}<div>Chưa cài tài khoản ngân hàng. <a class="text-brand bold" href="#/admin/settings">Cài đặt ngay</a></div></div>`;
+      <div class="xs muted">Nội dung: ${esc(qrInfo(b))}</div>`
+      : `<div class="notice warn">${icon('alert')}<div>Chưa cài tài khoản ngân hàng. <a class="text-brand bold" href="#/admin/settings">Cài đặt ngay</a></div></div>`;
   }
   const btn = el.querySelector('#completeBtn');
   if (btn) btn.disabled = !c.count;
@@ -233,13 +233,13 @@ async function complete() {
 function successModal(b, text, autoSent) {
   modal({
     title: '',
-    body: `<div class="center stack-sm" style="padding:6px 0 4px">
-      <div style="width:64px;height:64px;border-radius:50%;background:var(--brand-50);color:var(--brand);display:grid;place-items:center;margin:0 auto">${icon('check').replace('class="i ', 'style="width:34px;height:34px;stroke-width:2.5" class="i ')}</div>
+    body: `<div class="center stack-sm payment-success">
+      <div class="success-icon">${icon('check')}</div>
       <h2>Thanh toán thành công</h2>
       <div class="muted small">${esc(b.code)} · ${esc(b.tableName)} · ${payLabel(b.pay.method)}</div>
-      <div style="font-size:30px;font-weight:850;color:var(--brand)" class="num">${money(b.total)}</div>
+      <div class="success-amount num">${money(b.total)}</div>
       ${b.pay.change ? `<div class="change-box"><span>Tiền thối</span><b>${money(b.pay.change)}</b></div>` : ''}
-      ${autoSent ? `<div class="pill st-open" style="margin:4px auto">${icon('check')} Đã gửi nhóm Zalo</div>` : ''}
+      ${autoSent ? `<div class="pill st-open success-pill">${icon('check')} Đã gửi nhóm Zalo</div>` : ''}
     </div>`,
     foot: `<button class="btn btn-zalo" data-a="zalo">${icon('zalo')} ${autoSent ? 'Gửi lại' : 'Gửi Zalo'}</button>
       <button class="btn" data-a="print">${icon('print')} In hóa đơn</button>
@@ -289,7 +289,7 @@ async function more() {
 function notActive() {
   el.innerHTML = `<div class="pay-page"><div class="pane-head"><a class="icon-btn" href="#/tables">${icon('back')}</a><div class="ph-title"><b>Bill</b></div></div>
     <div class="empty">${icon('receipt')}<h2>Bill không còn hoạt động</h2><p class="small mt">Bill này đã được thanh toán, hủy hoặc gộp.</p>
-    <div class="row mt" style="justify-content:center"><a class="btn" href="#/history">Xem lịch sử</a><a class="btn btn-primary" href="#/tables">Về sơ đồ bàn</a></div></div></div>`;
+    <div class="row mt justify-center"><a class="btn" href="#/history">Xem lịch sử</a><a class="btn btn-primary" href="#/tables">Về sơ đồ bàn</a></div></div></div>`;
 }
 
 export default {

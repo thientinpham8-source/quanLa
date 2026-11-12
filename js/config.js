@@ -11,13 +11,14 @@ export const FIREBASE_CONFIG = {
   measurementId: "G-2JLCY9DLBQ",
 };
 
-// 2 tài khoản đăng nhập (tạo trong Firebase > Authentication > Email/Password).
+// Tài khoản đăng nhập (tạo trong Firebase > Authentication > Email/Password).
 // Mật khẩu = mã PIN 6 số. Nhớ sửa email trong firestore.rules nếu đổi ở đây.
 export const ACCOUNTS = {
   order: 'order@quanla.app',
   cashier: 'thungan@quanla.app',
+  kitchen: 'bep@quanla.app',
 };
 
 export const SHOP_ID = 'quan-la';
 export const FIREBASE_VERSION = '10.12.2';
-export const APP_VERSION = '1.0.46';
+export const APP_VERSION = '1.0.69';

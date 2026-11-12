@@ -1,6 +1,6 @@
 # 🌿 Quán Lá – Webapp quản lý quán ăn
 
-Ứng dụng web viết bằng HTML, CSS và JavaScript ES modules, không dùng framework và không cần bước build. Dữ liệu nhiều thiết bị đồng bộ qua Firebase Authentication và Cloud Firestore. Ứng dụng có hai vai trò **Order** và **Thu ngân**, cùng các luồng gọi món, thanh toán, báo bếp, Zalo và in hóa đơn.
+Ứng dụng web viết bằng HTML, CSS và JavaScript ES modules, không dùng framework và không cần bước build. Dữ liệu nhiều thiết bị đồng bộ qua Firebase Authentication và Cloud Firestore. Ứng dụng có ba vai trò **Order**, **Thu ngân** và **Bếp**, cùng các luồng gọi món, phiếu bếp, thanh toán, Zalo và in hóa đơn.
 
 > **Tài liệu theo hiện trạng mã nguồn.** Ứng dụng hiện yêu cầu Firebase; chế độ database demo localStorage đã bị gỡ. Không sử dụng PIN demo `111111` / `999999`.
 
@@ -18,7 +18,7 @@ Sau đó mở `http://127.0.0.1:8080`. Trên Windows có thể chạy `Chay_Quan
 
 Local server chỉ phục vụ file giao diện, **không thay thế Firebase**. Cần có Internet, Firebase Web App hợp lệ trong `js/config.js`, bật Email/Password Authentication, tài khoản nhân viên và Firestore Rules. Nếu thiếu cấu hình hoặc Firebase chưa sẵn sàng, đăng nhập và đồng bộ dữ liệu sẽ không hoạt động.
 
-Mã PIN là mật khẩu của tài khoản Firebase, không phải PIN dùng chung để chạy demo. Order đăng nhập bằng `order@quanla.app`, Thu ngân bằng `thungan@quanla.app`; tài khoản phải được tạo trong Firebase Authentication trước khi sử dụng.
+Mã PIN là mật khẩu của tài khoản Firebase, không phải PIN dùng chung để chạy demo. Order đăng nhập bằng `order@quanla.app`, Thu ngân bằng `thungan@quanla.app`, Bếp bằng `bep@quanla.app`; tạo cả ba tài khoản trong Firebase Authentication (Email/Password) trước khi sử dụng. Mỗi mật khẩu PIN phải có ít nhất 6 ký tự.
 
 Ở màn hình nhập PIN, có thể bật **Giữ đăng nhập trên thiết bị này** để Firebase duy trì phiên sau khi đóng/mở lại app. Tùy chọn này không lưu PIN; nếu tắt, phiên chỉ tồn tại trong tab hiện tại. Trên thiết bị dùng chung nên tắt tùy chọn và luôn đăng xuất sau khi dùng.
 
@@ -34,9 +34,10 @@ quan-la/
 │   ├── base.css          Biến màu, reset, chế độ tối, mẫu in 80mm
 │   ├── layout.css        Thanh trên, menu dưới (mobile), menu trái (desktop)
 │   ├── components.css    Nút, chip, modal/bottom-sheet, toast, công tắc…
-│   └── pages.css         Đăng nhập, sơ đồ bàn, gọi món, thanh toán, quản trị
+│   ├── pages.css         Đăng nhập, sơ đồ bàn, gọi món, bếp, thanh toán, quản trị
+│   └── responsive.css    Quy tắc bố cục theo breakpoint
 ├── js/
-│   ├── config.js         ⚙️ Cấu hình Firebase + email 2 tài khoản
+│   ├── config.js         ⚙️ Cấu hình Firebase + email tài khoản
 │   ├── app.js            Khởi động + điều hướng + phân quyền trang
 │   ├── db.js             Firebase Authentication + Firestore
 │   ├── store.js          Trạng thái chung + đồng bộ realtime + thực đơn khởi tạo
@@ -44,11 +45,11 @@ quan-la/
 │   ├── actions.js        Nghiệp vụ: mở bàn, gửi món, chuyển/gộp bàn, hủy món, thanh toán
 │   ├── bill.js           Tính tiền, mẫu phiếu bếp/hóa đơn (chữ, bản in, ảnh), VietQR
 │   ├── zalo.js           Gửi Zalo tự động (Worker) + chia sẻ 1 chạm
-│   ├── notify.js         Chuông, rung, thông báo cho thu ngân
+│   ├── notify.js         Chuông, rung, thông báo cho thu ngân và bếp
 │   ├── ui.js, utils.js   Icon, modal, toast, định dạng tiền/giờ
-│   └── pages/            login, tables, order, orders, cashier, history, reports, admin, soldout, printer, inventory
+│   └── pages/            login, tables, order, orders, kitchen, cashier, history, reports, admin, soldout, printer, inventory
 ├── worker/zalo-worker.js Cloudflare Worker trung gian gửi Zalo Bot
-├── firestore.rules       Luật bảo mật phân quyền Order / Thu Ngân
+├── firestore.rules       Luật bảo mật phân quyền Order / Thu Ngân / Bếp
 └── firebase.json         Cấu hình deploy Firebase Hosting
 ```
 
@@ -56,13 +57,25 @@ quan-la/
 
 ## 3. Firebase và triển khai
 
-Ứng dụng kết nối tới Firebase theo cấu hình trong `js/config.js`. Nếu đổi Firebase project, cập nhật `FIREBASE_CONFIG`, tạo hai tài khoản Authentication tương ứng với `ACCOUNTS`, rồi triển khai `firestore.rules` từ repository. Không thay đổi email trong `config.js` mà quên cập nhật `firestore.rules`.
+Ứng dụng kết nối tới Firebase theo cấu hình trong `js/config.js`. Nếu đổi Firebase project, cập nhật `FIREBASE_CONFIG`, tạo ba tài khoản Authentication tương ứng với `ACCOUNTS`, rồi triển khai `firestore.rules` từ repository (ví dụ `firebase deploy --only firestore:rules`). Không thay đổi email trong `config.js` mà quên cập nhật `firestore.rules`.
 
-Thu ngân cần đăng nhập Firebase thành công để khởi tạo/cập nhật dữ liệu ban đầu. Sau đó Order có thể đăng nhập bằng tài khoản của mình. Đăng nhập ban đầu cần Internet; Firestore có thể lưu thay đổi offline và đồng bộ lại khi mạng phục hồi, nhưng không nên xem offline là đã xác nhận thao tác thành công ở máy chủ.
+Thu ngân cần đăng nhập Firebase thành công để khởi tạo/cập nhật dữ liệu ban đầu. Sau đó Order và Bếp có thể đăng nhập bằng tài khoản riêng. Đăng nhập ban đầu cần Internet; Firestore có thể lưu thay đổi offline và đồng bộ lại khi mạng phục hồi, nhưng không nên xem offline là đã xác nhận thao tác thành công ở máy chủ.
 
 Có thể chạy bằng static hosting hoặc Firebase Hosting. Repository đã có `firebase.json`; nếu triển khai bằng Firebase CLI, liên kết đúng Firebase project trước khi chạy `firebase deploy`. Hosting phải phục vụ nguyên cấu trúc thư mục để các đường dẫn tương đối trong app tiếp tục hoạt động.
 
 Thu ngân có thể xem lịch sử bill theo ngày và xóa các bill đã đóng của ngày đang chọn. Thao tác xóa cần triển khai Firestore Rules từ repository; bill đang phục vụ hoặc chờ thanh toán không bị xóa.
+
+### Quyền và luồng phiếu bếp
+
+| Thao tác | Order | Thu ngân | Bếp |
+|---|:-:|:-:|:-:|
+| Xem sơ đồ bàn, gọi món, gửi món xuống bếp | ✅ | ✅ | — |
+| Xem bill đang phục vụ, hủy món đã gửi (nhập lý do) | ✅ | ✅ | — |
+| Xem phiếu và chuyển **Chờ làm → Đang làm → Đã đủ món** | — | — | ✅ |
+| Xác nhận đã mang món ra bằng tick xanh trên bàn | ✅ | ✅ | — |
+| Thanh toán, xem báo cáo, quản lý cài đặt/thực đơn | — | ✅ | — |
+
+Mỗi lần gửi món (bao gồm gọi thêm hoặc tăng số lượng món đã gửi) tạo một phiếu riêng trên màn hình Bếp. Tick xanh ở góc bàn chỉ xuất hiện khi tất cả phiếu chưa phục vụ của bill đã **Đã đủ món**; Order hoặc Thu ngân chạm tick sau khi mang món ra để xác nhận. Tài khoản Bếp chỉ được đọc/cập nhật `kitchen_tickets`, không được đọc bill, giá món hay cài đặt.
 
 ---
 
@@ -143,29 +156,32 @@ Khi luồng tự động không dùng được, trên điện thoại có thể 
 ## 7. Quy trình sử dụng
 
 ```
-ORDER  : Chọn bàn → chạm món (+ ghi chú) → GỬI BẾP ──► phiếu bếp lên nhóm Zalo
+ORDER  : Chọn bàn → chạm món (+ ghi chú) → GỬI BẾP ──► phiếu hiện trên màn hình Bếp
                                     │                  └► máy Thu Ngân kêu chuông
          Khách gọi thêm → GỬI BẾP (lần 2, 3…)
          Xem đơn đang phục vụ → mở chi tiết đơn → hủy món đã gửi (nhập lý do; app báo bếp)
          Khách xin tính tiền → TÍNH TIỀN ──► bàn chuyển màu cam, báo Thu Ngân
+BẾP    : Chờ làm → BẮT ĐẦU LÀM → ĐÃ ĐỦ MÓN ──► Order/Thu ngân thấy tick xanh trên bàn
+         Order/Thu ngân chạm tick sau khi mang món ra để xác nhận đã phục vụ
 THU NGÂN: Mở bill → giảm giá / phụ thu → Tiền mặt (tự tính tiền thối) | Chuyển khoản (QR) | Kết hợp
          → HOÀN TẤT ──► lưu lịch sử + báo cáo, gửi hóa đơn lên Zalo, in hóa đơn, bàn trống lại
 ```
 
-| Chức năng | Order | Thu Ngân |
-|---|:-:|:-:|
-| Sơ đồ bàn, gọi món, ghi chú, chuyển bàn | ✅ | ✅ |
-| Sửa/xóa món **chưa gửi** | ✅ | ✅ |
-| Xem đơn đang phục vụ, hủy món **đã gửi** (bắt buộc lý do) | ✅ | ✅ |
-| Yêu cầu tính tiền, báo hết món | ✅ | ✅ |
-| Giảm giá, phụ thu, thu tiền, in, gửi hóa đơn | ❌ | ✅ |
-| Gộp bàn, hủy bill | ❌ | ✅ |
-| Lịch sử, báo cáo, xuất Excel (CSV) | ❌ | ✅ |
-| Quản lý thực đơn, bàn (thêm/bớt), nhân viên, cài đặt | ❌ | ✅ |
+| Chức năng | Order | Thu Ngân | Bếp |
+|---|:-:|:-:|:-:|
+| Sơ đồ bàn, gọi món, ghi chú, chuyển bàn | ✅ | ✅ | ❌ |
+| Xem đơn đang phục vụ, hủy món **đã gửi** (bắt buộc lý do) | ✅ | ✅ | ❌ |
+| Xem phiếu bếp, bắt đầu làm, xác nhận đủ món | ❌ | ❌ | ✅ |
+| Xác nhận đã mang món ra từ sơ đồ bàn | ✅ | ✅ | ❌ |
+| Giảm giá, phụ thu, thu tiền, in, gửi hóa đơn | ❌ | ✅ | ❌ |
+| Gộp bàn, hủy bill | ❌ | ✅ | ❌ |
+| Lịch sử, báo cáo, xuất Excel (CSV) | ❌ | ✅ | ❌ |
+| Quản lý thực đơn, bàn (thêm/bớt), nhân viên, cài đặt | ❌ | ✅ | ❌ |
 
 ---
 
 ## 8. Sao lưu và ghi chú
 - Dữ liệu ứng dụng lưu trong Firestore. Các nút **Sao lưu/Khôi phục** chỉ xuất hiện ở chế độ local cũ; chúng không sao lưu hay khôi phục Firestore. Hãy dùng công cụ sao lưu Firebase/Firestore phù hợp để bảo vệ dữ liệu thật.
 - Thu ngân có thể đổi PIN của tài khoản đang đăng nhập trong app. PIN Order cần đổi trong Firebase Console (Authentication).
+- Tạo `bep@quanla.app` trong Firebase Authentication và triển khai `firestore.rules` đã cập nhật để bật quyền phiếu bếp.
 - `BAO_CAO_CAU_TRUC.md` là tài liệu thiết kế ban đầu; nếu nội dung khác README hoặc mã nguồn hiện tại, ưu tiên mã nguồn và README này.

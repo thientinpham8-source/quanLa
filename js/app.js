@@ -5,7 +5,7 @@ import { restore, logout, ROLE_NAME } from './auth.js?v=1.0.59';
 import { icon, logo, toast, modal } from './ui.js';
 import { esc, initials } from './utils.js';
 import { unlockAudio, watchBills } from './notify.js?v=1.0.59';
-import { APP_VERSION } from './config.js?v=1.0.69';
+import { APP_VERSION } from './config.js?v=1.0.70';
 
 import login from './pages/login.js?v=1.0.59';
 import tables from './pages/tables.js?v=1.0.59';
@@ -14,7 +14,7 @@ import orders from './pages/orders.js?v=1.0.68';
 import bill from './pages/cashier.js?v=1.0.59';
 import history from './pages/history.js?v=1.0.59';
 import reports from './pages/reports.js?v=1.0.59';
-import admin from './pages/admin.js?v=1.0.69';
+import admin from './pages/admin.js?v=1.0.70';
 import soldout from './pages/soldout.js?v=1.0.59';
 import printer from './pages/printer.js?v=1.0.59';
 import inventory from './pages/inventory.js?v=1.0.59';

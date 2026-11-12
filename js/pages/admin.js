@@ -13,8 +13,14 @@ const categoryHue = index => `hsl(${(210 + index * 7) % 360} 42% 42%)`;
 
 /* ================= THỰC ĐƠN ================= */
 function menuPageData() {
-  const query = norm(menuQuery);
-  const matches = query ? store.menu.filter(m => norm(m.name).includes(query)) : store.menu;
+  const rawQuery = String(menuQuery || '').trim();
+  const keepDiacritics = /[\u0300-\u036f]/.test(rawQuery.normalize('NFD')) || /[đĐ]/.test(rawQuery);
+  const query = keepDiacritics ? rawQuery.normalize('NFC').toLocaleLowerCase('vi') : norm(rawQuery);
+  const matches = query ? store.menu.filter(m => {
+    // Stripping tone marks makes "bò" match unrelated words such as "bông".
+    const name = keepDiacritics ? String(m.name || '').normalize('NFC').toLocaleLowerCase('vi') : norm(m.name);
+    return name.includes(query);
+  }) : store.menu;
   const pages = store.categories.filter(c => matches.some(m => m.categoryId === c.id)).map(c => ({ id: c.id, name: c.name }));
   const orphan = matches.filter(m => !store.categories.some(c => c.id === m.categoryId));
   if (orphan.length) pages.push({ id: null, name: 'Chưa phân loại' });

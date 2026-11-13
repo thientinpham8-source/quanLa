@@ -8,23 +8,23 @@ import { unlockAudio, watchBills } from './notify.js?v=1.0.59';
 import { APP_VERSION } from './config.js?v=1.0.72';
 
 import login from './pages/login.js?v=1.0.59';
-import tables from './pages/tables.js?v=1.0.59';
-import order from './pages/order.js?v=1.0.73';
-import orders from './pages/orders.js?v=1.0.68';
-import bill from './pages/cashier.js?v=1.0.71';
+import tables from './pages/tables.js?v=1.0.74';
+import order from './pages/order.js?v=1.0.74';
+import orders from './pages/orders.js?v=1.0.74';
+import bill from './pages/cashier.js?v=1.0.74';
 import history from './pages/history.js?v=1.0.59';
-import reports from './pages/reports.js?v=1.0.59';
-import admin from './pages/admin.js?v=1.0.70';
+import reports from './pages/reports.js?v=1.0.74';
+import admin from './pages/admin.js?v=1.0.74';
 import soldout from './pages/soldout.js?v=1.0.59';
 import printer from './pages/printer.js?v=1.0.59';
-import inventory from './pages/inventory.js?v=1.0.59';
+import inventory from './pages/inventory.js?v=1.0.74';
 import kitchen from './pages/kitchen.js?v=1.0.65';
 
 const ROUTES = { login, tables, order, orders, bill, history, reports, admin, soldout, printer, inventory, kitchen };
 const NAV = {
-  order: [['tables', 'Sơ đồ bàn', 'grid'], ['orders', 'Đơn', 'list']],
+  order: [['tables', 'Sơ đồ bàn', 'table'], ['orders', 'Đơn', 'list']],
   cashier: [
-    ['tables', 'Sơ đồ bàn', 'grid'],
+    ['tables', 'Sơ đồ bàn', 'table'],
     ['orders', 'Thu ngân', 'cash'],
     ['soldout', 'Hết món', 'ban'],
     ['inventory', 'Tồn kho', 'box'],
@@ -105,7 +105,7 @@ function renderShell(role) {
       </div>
     </header>
     <main class="main" id="main"></main>
-    <nav class="bottomnav" aria-label="Điều hướng chính">${mobileNav.map(navLink).join('')}${hasMore ? `<button type="button" data-act="more-nav" aria-label="Mở các chức năng khác" aria-haspopup="dialog" aria-expanded="false">${icon('layers')}<span>Thêm</span></button>` : ''}</nav>
+    <nav class="bottomnav" aria-label="Điều hướng chính">${mobileNav.map(navLink).join('')}${hasMore ? `<button type="button" data-act="more-nav" aria-label="Mở các chức năng khác" aria-haspopup="dialog" aria-expanded="false">${icon('more')}<span>Thêm</span></button>` : ''}</nav>
   </div>`;
   shellRole = role;
   startClock();

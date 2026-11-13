@@ -1,5 +1,5 @@
 // Service worker: lưu sẵn giao diện để mở nhanh & dùng khi mất mạng
-const CACHE = 'quanla-v1.0.73';
+const CACHE = 'quanla-v1.0.74';
 const SHELL = [
   './', 'index.html', 'manifest.json',
   'css/base.css', 'css/layout.css', 'css/components.css', 'css/pages.css', 'css/responsive.css',

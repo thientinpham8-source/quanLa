@@ -84,6 +84,7 @@ function render() {
   if (!el) return;
   const metrics = computeMetrics();
   const list = getTrackedList();
+  el.querySelector('#invClear').hidden = !q;
 
   el.querySelector('#invMetrics').innerHTML = `
     <div class="inv-metric">
@@ -119,7 +120,7 @@ function render() {
   // Render bảng Excel
   const tbody = el.querySelector('#invTableBody');
   if (!list.length) {
-    tbody.innerHTML = `<tr><td colspan="6" class="excel-empty">Không tìm thấy mặt hàng nào phù hợp với bộ lọc</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="excel-empty">Không tìm thấy mặt hàng nào phù hợp với bộ lọc</td></tr>`;
     return;
   }
 
@@ -149,7 +150,7 @@ function render() {
       <td class="col-type"><span class="type-tag ${type === 'Bia' ? 'tag-beer' : 'tag-drink'}">${type}</span></td>
       <td class="col-stock">
         <div class="stock-main ${formatted.isOut ? 'text-danger' : formatted.isLow ? 'text-warn' : 'text-ok'}">
-          <b>${formatted.main}</b><span class="inv-stock-controls"><button type="button" class="inv-stock-add" data-act="importOne" data-id="${m.id}" aria-label="Nhập thêm ${esc(m.name)}" title="Nhập thêm số lượng">+</button><button type="button" class="inv-stock-remove" data-act="decrementOne" data-id="${m.id}" aria-label="Giảm một ${esc(unit)} ${esc(m.name)}" title="Giảm 1">−</button></span>
+          <b>${formatted.main}</b><span class="inv-stock-controls"><button type="button" class="inv-stock-add" data-act="importOne" data-id="${m.id}" aria-label="Nhập thêm ${esc(m.name)}" title="Nhập thêm số lượng">${icon('plus')}</button><button type="button" class="inv-stock-remove" data-act="decrementOne" data-id="${m.id}" aria-label="Giảm một ${esc(unit)} ${esc(m.name)}" title="Giảm 1">${icon('minus')}</button></span>
         </div>
       </td>
       <td class="col-status">${statusBadge}</td>
@@ -494,14 +495,11 @@ export default {
         <!-- Excel Title & Toolbar -->
         <div class="inv-header">
           <div class="inv-header-title">
-            <div class="excel-brand-badge">${icon('box')} TỒN KHO</div>
-            <div>
-              <h2>Quản Lý Tồn Kho Bia & Nước Ngọt</h2>
-            </div>
+            <h1 class="page-title">${icon('box')} Quản Lý Tồn Kho Bia & Nước Ngọt</h1>
           </div>
           <div class="inv-header-actions">
-            <button class="btn btn-ghost" data-act="export">${icon('download')} Xuất Excel</button>
-            <button class="btn btn-ghost" data-act="logs">${icon('receipt')} Nhật ký kho</button>
+            <button class="btn" data-act="export">${icon('download')} Xuất Excel</button>
+            <button class="btn" data-act="logs">${icon('receipt')} Nhật ký kho</button>
           </div>
         </div>
 
@@ -514,33 +512,20 @@ export default {
             <button class="excel-tab ${filter === 'all_drinks' ? 'active' : ''}" data-f="all_drinks">Tất cả đồ uống</button>
             <button class="excel-tab ${filter === 'beer' ? 'active' : ''}" data-f="beer">Bia</button>
             <button class="excel-tab ${filter === 'soft_drink' ? 'active' : ''}" data-f="soft_drink">Nước ngọt & Suối</button>
-            <button class="excel-tab ${filter === 'low_stock' ? 'active' : ''}" data-f="low_stock">⚠️ Cảnh báo hết (≤10)</button>
+            <button class="excel-tab ${filter === 'low_stock' ? 'active' : ''}" data-f="low_stock">${icon('alert')} Cảnh báo hết (≤10)</button>
           </div>
           <div class="excel-search">
             ${icon('search')}
-            <input class="input" id="invSearch" placeholder="Tìm kiếm nhanh tên bia, nước ngọt…" value="${esc(q)}">
-            ${q ? '<button class="clear-btn" id="invClear">&times;</button>' : ''}
+            <input class="input" id="invSearch" aria-label="Tìm mặt hàng trong kho" placeholder="Tìm kiếm nhanh tên bia, nước ngọt…" value="${esc(q)}">
+            <button type="button" class="clear-btn" id="invClear" aria-label="Xóa tìm kiếm" ${q ? '' : 'hidden'}>${icon('x')}</button>
           </div>
         </div>
 
         <!-- Excel Spreadsheet Table -->
         <div class="excel-wrap">
-          <div class="excel-sheet-header">
-            <div class="sheet-info">
-              <span class="sheet-icon">📊</span>
-              <b>Bảng_Theo_Dõi_Tồn_Kho.xlsx</b>
-            </div>
-          </div>
           <div class="excel-scroll">
-            <table class="excel-table">
+            <table class="excel-table" aria-label="Tồn kho bia và nước ngọt">
               <thead>
-                <tr class="excel-col-letters">
-                  <th class="col-stt">A</th>
-                  <th class="col-name">B</th>
-                  <th class="col-type">C</th>
-                  <th class="col-stock">D</th>
-                  <th class="col-status">E</th>
-                </tr>
                 <tr class="excel-col-headers">
                   <th class="col-stt">STT</th>
                   <th class="col-name">Tên mặt hàng</th>

@@ -60,20 +60,22 @@ function render() {
   if (!r) { body.innerHTML = '<div class="empty">Đang tải…</div>'; return; }
   const maxTop = Math.max(1, ...r.top.map(t => t.qty));
   body.innerHTML = `
-    <div class="kpis">
+    <div class="kpis report-main-kpis">
       <div class="card kpi hl"><div class="k-label">Doanh thu</div><div class="k-val">${money(r.revenue)}</div><div class="k-sub">${label()}</div></div>
       <div class="card kpi"><div class="k-label">Số bill</div><div class="k-val">${r.count}</div><div class="k-sub">TB ${money(r.avg)}/bill</div></div>
       <div class="card kpi"><div class="k-label">Tiền mặt</div><div class="k-val">${money(r.cash)}</div><div class="k-sub">${r.revenue ? Math.round(r.cash / r.revenue * 100) : 0}%</div></div>
       <div class="card kpi"><div class="k-label">Chuyển khoản</div><div class="k-val">${money(r.transfer)}</div><div class="k-sub">${r.revenue ? Math.round(r.transfer / r.revenue * 100) : 0}%</div></div>
-      <div class="card kpi"><div class="k-label">Số món bán</div><div class="k-val">${r.items}</div></div>
-      <div class="card kpi"><div class="k-label">Giảm giá</div><div class="k-val text-danger">-${short(r.discount)}</div></div>
-      <div class="card kpi"><div class="k-label">Phụ thu</div><div class="k-val">+${short(r.surcharge)}</div></div>
-      <div class="card kpi"><div class="k-label">Bill hủy</div><div class="k-val">${r.cancelled}</div></div>
     </div>
-    <div class="settings-grid mt">
-      <div class="card card-pad"><h3>Doanh thu theo ${from === to ? 'giờ' : 'ngày'}</h3>${chart(r)}</div>
-      <div class="card card-pad"><h3>Món bán chạy</h3>
-        ${r.top.length ? r.top.slice(0, 10).map((t, i) => { const stars = Math.max(1, Math.ceil(t.qty / maxTop * 5)); return `<div class="hbar"><span class="top-item-name"><b>${i + 1}.</b> ${esc(t.name)}</span><span class="small"><b>${t.qty}</b> · ${short(t.revenue)}</span><span class="top-item-stars" role="img" aria-label="${stars} trên 5 sao">${'★'.repeat(stars)}<span>${'☆'.repeat(5 - stars)}</span></span></div>`; }).join('') : '<div class="empty small">Chưa có dữ liệu</div>'}
+    <div class="report-secondary">
+      <div class="report-stat"><div class="k-label">Số món bán</div><div class="k-val">${r.items}</div></div>
+      <div class="report-stat"><div class="k-label">Giảm giá</div><div class="k-val text-danger">-${short(r.discount)}</div></div>
+      <div class="report-stat"><div class="k-label">Phụ thu</div><div class="k-val">+${short(r.surcharge)}</div></div>
+      <div class="report-stat"><div class="k-label">Bill hủy</div><div class="k-val">${r.cancelled}</div></div>
+    </div>
+    <div class="report-charts">
+      <div class="card card-pad report-chart"><h3>${icon('chart')} Doanh thu theo ${from === to ? 'giờ' : 'ngày'}</h3>${chart(r)}</div>
+      <div class="card card-pad report-top"><h3>${icon('utensils')} Món bán chạy</h3>
+        ${r.top.length ? r.top.slice(0, 10).map((t, i) => { const stars = Math.max(1, Math.ceil(t.qty / maxTop * 5)); return `<div class="hbar"><span class="top-item-name"><b>${i + 1}.</b> ${esc(t.name)}</span><span class="small top-item-values"><b>${t.qty}</b> · ${short(t.revenue)}</span><span class="top-item-stars" role="img" aria-label="${stars} trên 5 sao">${Array.from({ length: 5 }, (_, index) => icon('star', index >= stars ? 'is-empty' : '')).join('')}</span></div>`; }).join('') : '<div class="empty small">Chưa có dữ liệu</div>'}
       </div>
     </div>`;
 }
@@ -96,15 +98,19 @@ export default {
   async mount(root) {
     el = root; setTitle('Báo cáo');
     el.innerHTML = `
-      <div class="page-head"><h1>Báo cáo</h1>
-        <div class="row wrap">
-          <button class="btn btn-sm btn-zalo" data-a="zalo">${icon('zalo')} Gửi Zalo</button>
-          <button class="btn btn-sm" data-a="print">${icon('print')} In</button>
-          <button class="btn btn-sm" data-a="csv">${icon('download')} Excel (CSV)</button>
-        </div></div>
-      <div class="chips mb">${[['today', 'Hôm nay'], ['yesterday', 'Hôm qua'], ['7d', '7 ngày'], ['month', 'Tháng này'], ['custom', 'Tùy chọn']].map(([k, l]) => `<button class="chip ${range === k ? 'active' : ''}" data-r="${k}">${l}</button>`).join('')}</div>
-      <div class="row mb ${range === 'custom' ? '' : 'hidden'}" id="custom"><input class="input" type="date" id="from" value="${from}"><span>→</span><input class="input" type="date" id="to" value="${to}"></div>
-      <div id="rbody"></div>`;
+      <div class="reports-page">
+        <div class="page-head"><h1 class="page-title">${icon('chart')} Báo cáo</h1>
+          <div class="row wrap">
+            <button class="btn btn-sm btn-zalo" data-a="zalo">${icon('zalo')} Gửi Zalo</button>
+            <button class="btn btn-sm" data-a="print">${icon('print')} In</button>
+            <button class="btn btn-sm" data-a="csv">${icon('download')} Excel (CSV)</button>
+          </div></div>
+        <div class="report-filters">
+          <div class="chips mb">${[['today', 'Hôm nay'], ['yesterday', 'Hôm qua'], ['7d', '7 ngày'], ['month', 'Tháng này'], ['custom', 'Tùy chọn']].map(([k, l]) => `<button class="chip ${range === k ? 'active' : ''}" data-r="${k}">${l}</button>`).join('')}</div>
+          <div class="row mb ${range === 'custom' ? '' : 'hidden'}" id="custom"><input class="input" type="date" id="from" aria-label="Từ ngày" value="${from}"><span>${icon('next')}</span><input class="input" type="date" id="to" aria-label="Đến ngày" value="${to}"></div>
+        </div>
+        <div id="rbody"></div>
+      </div>`;
     const onClick = e => {
       const t = e.target.closest('[data-r],[data-a]');
       if (!t) return;

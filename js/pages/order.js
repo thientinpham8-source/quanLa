@@ -114,12 +114,12 @@ function itemHTML(m, showCategory = false) {
   const qn = qtyOf(m.id);
   const sold = m.available === false;
   const categoryName = showCategory ? store.categories.find(c => c.id === m.categoryId)?.name || 'Khác' : '';
-  return `<div class="mitem ${sold ? 'is-sold' : ''} ${qn ? 'in-cart' : ''}" data-act="add" data-id="${m.id}">
+  return `<div class="mitem ${sold ? 'is-sold' : ''} ${qn ? 'in-cart' : ''}" data-act="add" data-id="${m.id}" role="button" tabindex="0" aria-label="${soldMode ? `${esc(m.name)}: ${sold ? 'Hết' : 'Còn'}` : `Thêm ${esc(m.name)}`}" aria-disabled="${!soldMode && sold}">
     <div class="mi-main"><div class="mi-name">${esc(m.name)}</div>
       ${showCategory ? `<small class="mi-category">${esc(categoryName)}</small>` : ''}
       <div class="mi-price">${m.price > 0 ? money(m.price) : esc(m.priceLabel || 'Chưa có giá')} ${sold ? '<span class="tag-sold">HẾT</span>' : ''}</div>${m.priceNote ? `<small class="muted">${esc(m.priceNote)}</small>` : ''}</div>
     <div class="mi-ctrl">
-      ${soldMode ? `<span class="pill ${sold ? 'st-cancelled' : 'st-open'}">${sold ? 'Hết' : 'Còn'}</span>` : `<span class="add" aria-hidden="true">${icon('plus')}</span>`}
+      ${soldMode ? `<span class="pill ${sold ? 'st-cancelled' : 'st-open'}">${sold ? 'Hết' : 'Còn'}</span>` : `${qn > 0 ? `<span class="q">${qn}</span>` : ''}<span class="add" aria-hidden="true">${icon('plus')}</span>`}
     </div></div>`;
 }
 
@@ -144,8 +144,8 @@ function renderCart() {
   const isCashier = store.user.role === 'cashier';
   const pane = el.querySelector('#cartPane');
   pane.innerHTML = `
-    <div class="cp-head"><h2>Đơn ${esc(t?.name || '')}</h2>
-      ${b ? `<button class="btn btn-sm btn-ghost" data-act="move">${icon('move')} Chuyển bàn</button><button class="btn btn-sm btn-ghost" data-act="merge">${icon('merge')} Ghép bàn</button>` : ''}
+    <div class="cp-head"><h2>${icon('receipt')} Đơn ${esc(t?.name || '')}</h2>
+      ${b ? `<button class="btn btn-sm" data-act="move">${icon('move')} Chuyển bàn</button><button class="btn btn-sm" data-act="merge">${icon('merge')} Ghép bàn</button>` : ''}
       <button class="icon-btn sm only-mobile" data-act="closecart" aria-label="Đóng">${icon('x')}</button></div>
     <div class="cp-body">
       <div class="cp-sec"><span>Món mới · chưa gửi</span>${cart.length ? `<button class="text-danger xs bold" data-act="clear">Xóa hết</button>` : ''}</div>
@@ -397,10 +397,18 @@ export default {
       }
     };
     const onInput = e => { if (e.target.id === 'q') { q = e.target.value; renderCats(); renderMenu(); } };
+    const onKeydown = e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const item = e.target.closest('.mitem');
+      if (!item || !el.contains(item)) return;
+      e.preventDefault();
+      item.click();
+    };
     el.addEventListener('click', onClick);
     el.addEventListener('input', onInput);
+    el.addEventListener('keydown', onKeydown);
     const tick = setInterval(renderHead, 30000);
-    return () => { el.removeEventListener('click', onClick); el.removeEventListener('input', onInput); clearInterval(tick); };
+    return () => { el.removeEventListener('click', onClick); el.removeEventListener('input', onInput); el.removeEventListener('keydown', onKeydown); clearInterval(tick); };
   },
   update(keys) {
     if (!el.querySelector('#op')) return;

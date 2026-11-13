@@ -21,13 +21,13 @@ function tableCard(t) {
     ${isNew ? '<span class="new-dot" aria-label="Có cập nhật mới"></span>' : ''}
     ${kitchenReady ? `<button class="kitchen-ready-check" data-act="serve-kitchen" data-id="${b.id}" title="Đã mang món ra" aria-label="Xác nhận đã mang món ra ${esc(t.name)}">${icon('check')}</button>` : ''}
     <button class="tc-main" aria-label="${esc(t.name)}: ${statusLabel}">
-      <span class="tc-top"><span class="tc-name">${esc(t.name)}</span></span>
+      <span class="tc-top"><span class="tc-name">${esc(t.name)}</span><span class="tc-symbol">${icon('table')}</span></span>
       <span class="tc-mid">${b ? (c.count ? short(c.total) : 'Mới mở') : 'Trống'}</span>
       <span class="tc-bot">${!b ? 'Sẵn sàng' : st === 'waiting' ? `<b class="text-accent">${icon('cash')} Chờ thanh toán</b>` : `${icon('clock')}${dur(min)} · ${c.count} món`}</span>
     </button>
     ${b ? `<div class="tc-acts">
-      <button class="tc-act" data-act="move" data-id="${t.id}" title="Đổi bàn" aria-label="Đổi bàn ${esc(t.name)}">${icon('move')}</button>
-      <button class="tc-act" data-act="merge" data-id="${t.id}" title="Ghép bàn" aria-label="Ghép bàn ${esc(t.name)}">${icon('merge')}</button>
+      <button class="tc-act" data-act="move" data-id="${t.id}" title="Đổi bàn" aria-label="Đổi bàn ${esc(t.name)}">${icon('move')}<span>Đổi</span></button>
+      <button class="tc-act" data-act="merge" data-id="${t.id}" title="Ghép bàn" aria-label="Ghép bàn ${esc(t.name)}">${icon('merge')}<span>Ghép</span></button>
     </div>` : ''}
   </div>`;
 }
@@ -112,17 +112,18 @@ function render() {
   el.innerHTML = `
     <div class="dash">
       <section>
-        <div class="page-head">
+        <div class="page-head"><h1 class="page-title">${icon('table')} Sơ đồ bàn</h1></div>
+        <div class="table-toolbar">
           <div class="stats">
-            <button type="button" class="stat ${statusFilter === 'empty' ? 'active' : ''}" data-status="empty" aria-pressed="${statusFilter === 'empty'}"><i class="dot d-empty"></i>Trống ${counts.empty}</button>
-            <button type="button" class="stat ${statusFilter === 'serving' ? 'active' : ''}" data-status="serving" aria-pressed="${statusFilter === 'serving'}"><i class="dot d-serving"></i>Có khách ${counts.serving}</button>
-            <button type="button" class="stat ${statusFilter === 'waiting' ? 'active' : ''}" data-status="waiting" aria-pressed="${statusFilter === 'waiting'}"><i class="dot d-waiting"></i>Chờ thanh toán ${counts.waiting}</button>
+            <button type="button" class="stat ${statusFilter === 'empty' ? 'active' : ''}" data-status="empty" aria-pressed="${statusFilter === 'empty'}"><i class="dot d-empty"></i>Trống <span class="stat-count">${counts.empty}</span></button>
+            <button type="button" class="stat ${statusFilter === 'serving' ? 'active' : ''}" data-status="serving" aria-pressed="${statusFilter === 'serving'}"><i class="dot d-serving"></i>Có khách <span class="stat-count">${counts.serving}</span></button>
+            <button type="button" class="stat ${statusFilter === 'waiting' ? 'active' : ''}" data-status="waiting" aria-pressed="${statusFilter === 'waiting'}"><i class="dot d-waiting"></i>Chờ thanh toán <span class="stat-count">${counts.waiting}</span></button>
           </div>
+          ${showArea ? `<div class="chips table-areas">
+            <button class="chip ${area === 'all' ? 'active' : ''}" data-area="all">Tất cả <span class="cnt">${store.tables.length}</span></button>
+            ${store.areas.map(a => `<button class="chip ${area === a.id ? 'active' : ''}" data-area="${a.id}">${esc(a.name)} <span class="cnt">${store.tables.filter(t => t.areaId === a.id).length}</span></button>`).join('')}
+          </div>` : ''}
         </div>
-        ${showArea ? `<div class="chips mb">
-          <button class="chip ${area === 'all' ? 'active' : ''}" data-area="all">Tất cả <span class="cnt">${store.tables.length}</span></button>
-          ${store.areas.map(a => `<button class="chip ${area === a.id ? 'active' : ''}" data-area="${a.id}">${esc(a.name)} <span class="cnt">${store.tables.filter(t => t.areaId === a.id).length}</span></button>`).join('')}
-        </div>` : ''}
         ${!store.loaded.has('tables') ? '<div class="empty">Đang tải sơ đồ bàn…</div>' :
           list.length ? `<div class="tgrid">${list.map(tableCard).join('')}</div>` :
           `<div class="empty">${icon('grid')}Chưa có bàn${isCashier ? ' – thêm bàn trong <a class="text-brand bold" href="#/admin/tables">Quản lý</a>' : ''}</div>`}

@@ -38,12 +38,12 @@ function menuHTML() {
     const hue = categoryHue(Math.max(0, cats.findIndex(x => x.id === c?.id)));
     return `<div class="card mb admin-menu-card">
     <div class="card-h"><h3 class="category-heading" style="--category-color:${hue}">${esc(c ? c.name : 'Chưa phân loại')} <span class="muted xs">(${items.length})</span></h3>
-      ${c ? `<div class="row"><button class="icon-btn sm" data-a="catUp" data-id="${c.id}" title="Lên">${icon('up')}</button><button class="icon-btn sm" data-a="catEdit" data-id="${c.id}" title="Đổi tên">${icon('edit')}</button><button class="icon-btn sm danger" data-a="catDel" data-id="${c.id}" title="Xóa">${icon('trash')}</button></div>` : ''}</div>
+      ${c ? `<div class="row"><button class="icon-btn sm" data-a="catUp" data-id="${c.id}" title="Lên" aria-label="Đưa danh mục ${esc(c.name)} lên trên">${icon('up')}</button><button class="icon-btn sm" data-a="catEdit" data-id="${c.id}" title="Đổi tên" aria-label="Đổi tên danh mục ${esc(c.name)}">${icon('edit')}</button><button class="icon-btn sm danger" data-a="catDel" data-id="${c.id}" title="Xóa" aria-label="Xóa danh mục ${esc(c.name)}">${icon('trash')}</button></div>` : ''}</div>
     <div class="list admin-menu-items">${items.map(m => `<div class="admin-row">
       <div class="ar-main"><b>${esc(m.name)}</b><span class="small muted">${m.price > 0 ? money(m.price) : esc(m.priceLabel || 'Chưa có giá')}${m.priceNote ? ` · ${esc(m.priceNote)}` : ''}</span></div>
-      <label class="switch" title="Còn / hết món"><input type="checkbox" data-a="avail" data-id="${m.id}" ${m.available !== false ? 'checked' : ''}><span></span></label>
-      <button class="icon-btn sm" data-a="itemEdit" data-id="${m.id}">${icon('edit')}</button>
-      <button class="icon-btn sm danger" data-a="itemDel" data-id="${m.id}">${icon('trash')}</button>
+      <label class="switch" title="Còn / hết món"><input type="checkbox" data-a="avail" data-id="${m.id}" aria-label="Còn / hết món ${esc(m.name)}" ${m.available !== false ? 'checked' : ''}><span></span></label>
+      <button class="icon-btn sm" data-a="itemEdit" data-id="${m.id}" aria-label="Sửa món ${esc(m.name)}">${icon('edit')}</button>
+      <button class="icon-btn sm danger" data-a="itemDel" data-id="${m.id}" aria-label="Xóa món ${esc(m.name)}">${icon('trash')}</button>
     </div>`).join('') || '<div class="admin-row muted small">Chưa có món</div>'}</div></div>`;
   };
   const searchResults = matches.length
@@ -53,10 +53,11 @@ function menuHTML() {
         ${orphan.length ? group(null, orphan) : ''}
       </div>`
     : '<div class="empty">Không tìm thấy món phù hợp</div>';
-  return `<div class="menu-admin-toolbar mb"><div class="menu-admin-actions"><button class="btn btn-primary" data-a="itemAdd">${icon('plus')} Thêm món</button><button class="btn btn-primary" data-a="catAdd">${icon('layers')} Thêm danh mục</button></div>
-    ${!searching ? `<div class="category-shortcuts">${visibleCategories.filter(c => c.id).map(c => { const i = cats.findIndex(x => x.id === c.id); return `<button class="category-shortcut ${page?.id === c.id ? 'active' : ''}" style="--category-color:${categoryHue(i)}" data-a="catPage" data-id="${c.id}">${esc(c.name)}</button>`; }).join('')}</div>` : ''}
+  return `<div class="menu-admin-toolbar mb">
+      <div class="searchbox menu-admin-search">${icon('search')}<input class="input" id="menuSearch" type="search" aria-label="Tìm món trong toàn bộ thực đơn" placeholder="Tìm món trong toàn bộ thực đơn…" value="${esc(menuQuery)}" autocomplete="off"></div>
+      <div class="menu-admin-actions"><button class="btn btn-primary" data-a="itemAdd">${icon('plus')} Thêm món</button><button class="btn" data-a="catAdd">${icon('layers')} Thêm danh mục</button></div>
     </div>
-    <div class="searchbox menu-admin-search">${icon('search')}<input class="input" id="menuSearch" type="search" placeholder="Tìm món trong toàn bộ thực đơn…" value="${esc(menuQuery)}" autocomplete="off"></div>
+    ${!searching ? `<div class="category-shortcuts">${visibleCategories.filter(c => c.id).map(c => { const i = cats.findIndex(x => x.id === c.id); return `<button class="category-shortcut ${page?.id === c.id ? 'active' : ''}" style="--category-color:${categoryHue(i)}" data-a="catPage" data-id="${c.id}">${esc(c.name)}</button>`; }).join('')}</div>` : ''}
     ${searching ? searchResults : page ? group(page.id ? cats.find(c => c.id === page.id) : null, page.id ? matches.filter(m => m.categoryId === page.id) : orphan) : '<div class="empty">Chưa có danh mục thực đơn</div>'}
     ${!searching && pages.length > 1 ? `<div class="menu-page-nav admin-menu-page mb">
       <button class="icon-btn" data-a="menuPrev" aria-label="Danh mục trước" ${menuPage <= 0 ? 'disabled' : ''}>${icon('back')}</button>
@@ -124,9 +125,9 @@ function settingsHTML() {
   s.address ||= '61k/Xã Hòa Phú,H.Long Hồ,Vĩnh Long';
   const z = s.zalo, b = s.bank;
   return `<div class="chips settings-subtabs">
-      ${[['shop', 'Thông tin quán'], ['discounts', 'Giảm giá và phụ thu'], ['zalo', 'Gửi Zalo'], ['other', 'Khác']].map(([key, label]) => `<button type="button" class="chip ${settingsSubtab === key ? 'active' : ''}" data-settings-tab="${key}">${label}</button>`).join('')}
+      ${[['shop', 'Thông tin quán', 'store'], ['discounts', 'Giảm giá và phụ thu', 'percent'], ['zalo', 'Gửi Zalo', 'zalo'], ['other', 'Khác', 'settings']].map(([key, label, glyph]) => `<button type="button" class="chip ${settingsSubtab === key ? 'active' : ''}" data-settings-tab="${key}">${icon(glyph)} ${label}</button>`).join('')}
     </div>
-    <div class="settings-grid settings-columns">
+    <div class="settings-grid settings-columns" data-section="${esc(settingsSubtab)}">
     <div class="card card-pad stack" data-settings-panel="shop" ${settingsSubtab === 'shop' ? '' : 'hidden'}><h3>${icon('store')} Thông tin quán</h3>
       <label class="field"><span>Tên quán</span><input class="input" data-k="shopName" value="${esc(s.shopName)}"></label>
       <label class="field"><span>Khẩu hiệu</span><input class="input" data-k="slogan" value="${esc(s.slogan || '')}"></label>
@@ -149,7 +150,7 @@ function settingsHTML() {
         <input class="input" data-sp="${i}" data-f="label" value="${esc(x.label)}" placeholder="Tên">
         <input class="input" data-sp="${i}" data-f="value" value="${x.value}" inputmode="numeric">
         <select class="input" data-sp="${i}" data-f="type"><option value="percent" ${x.type === 'percent' ? 'selected' : ''}>%</option><option value="amount" ${x.type === 'amount' ? 'selected' : ''}>VNĐ</option></select>
-        <button class="icon-btn sm danger" data-a="spDel" data-i="${i}">${icon('trash')}</button></div>`).join('')}</div>
+        <button class="icon-btn sm danger" data-a="spDel" data-i="${i}" aria-label="Xóa phụ thu ${esc(x.label)}">${icon('trash')}</button></div>`).join('')}</div>
       <button class="btn btn-sm" data-a="spAdd">${icon('plus')} Thêm loại phụ thu</button>
     </div>
 
@@ -190,7 +191,7 @@ function setPath(obj, path, val) { const ks = path.split('.'); let o = obj; whil
 /* ================= RENDER ================= */
 function render() {
   const body = tab === 'menu' ? menuHTML() : tab === 'tables' ? tablesHTML() : settingsHTML();
-  el.innerHTML = `<div class="page-head"><h1>Quản lý</h1></div>
+  el.innerHTML = `<div class="page-head"><h1 class="page-title">${icon('settings')} Quản lý</h1></div>
     <div class="chips admin-tabs">${TABS.map(([k, l, i]) => `<a class="chip ${tab === k ? 'active' : ''}" href="#/admin/${k}">${icon(i)} ${l}</a>`).join('')}</div>
     <div id="abody">${body}</div>`;
 }

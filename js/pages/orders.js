@@ -15,7 +15,7 @@ function render() {
   const visible = expandedBillId ? list.filter(b => b.id === expandedBillId) : list;
   const cnt = s => all.filter(b => b.status === s).length;
   el.innerHTML = `
-    <div class="page-head"><h1>${isCashier ? 'Thu ngân' : 'Đơn đang phục vụ'}</h1></div>
+    <div class="page-head"><h1 class="page-title">${icon(isCashier ? 'cash' : 'list')}${isCashier ? 'Thu ngân' : 'Đơn đang phục vụ'}</h1></div>
     <div class="chips mb">
       <button class="chip ${filter === 'all' ? 'active' : ''}" data-f="all">Tất cả <span class="cnt">${all.length}</span></button>
       <button class="chip ${filter === 'waiting' ? 'active' : ''}" data-f="waiting">Chờ thanh toán <span class="cnt">${cnt('waiting')}</span></button>

@@ -40,11 +40,11 @@ function skeleton() {
       <a class="icon-btn" href="#/tables" aria-label="Quay lại">${icon('back')}</a>
       <div class="ph-title"><b>${esc(b.tableName)}</b><span class="pill st-${b.status}">${b.status === 'waiting' ? 'Chờ thanh toán' : 'Đang phục vụ'}</span>
         <span class="xs muted">Vào ${fmtTime(b.openedAt)} · ${esc((b.staff || []).join(', '))}</span></div>
-      <button class="icon-btn" data-act="more" aria-label="Thêm thao tác">${icon('settings')}</button>
+      <button class="icon-btn" data-act="more" aria-label="Thêm thao tác">${icon('more')}</button>
     </div>
     <div class="pay-grid">
-      <section class="stack">
-        <div class="card"><div class="card-h"><h3>Danh sách món</h3><a class="btn btn-sm btn-soft" href="#/order/${b.tableId}">${icon('plus')} Thêm món</a></div>
+      <section class="stack pay-details">
+        <div class="card"><div class="card-h"><h3>${icon('list')} Danh sách món</h3><a class="btn btn-sm btn-soft" href="#/order/${b.tableId}">${icon('plus')} Thêm món</a></div>
           <div class="card-pad pay-items" id="items"></div></div>
         <div class="btn-row wrap">
           <button class="btn" data-act="printDraft">${icon('print')} In tính tiền</button>
@@ -53,9 +53,10 @@ function skeleton() {
       </section>
       <section class="stack pay-side">
         <div class="card card-pad stack-sm pay-summary-card">
-          <div id="adjust"></div>
-          <div class="divider divider-compact"></div>
+          <h3>${icon('receipt')} Tổng thanh toán</h3>
           <div id="sum" class="stack-sm"></div>
+          <div class="divider divider-compact"></div>
+          <div id="adjust"></div>
         </div>
         <div class="card card-pad stack-sm" id="method"></div>
         <button class="btn btn-primary btn-block" data-act="complete" id="completeBtn">${icon('check')} HOÀN TẤT THANH TOÁN</button>
@@ -115,11 +116,11 @@ function renderMethod() {
   const m = draft.method;
   const box = el.querySelector('#method');
   box.innerHTML = `
-    <h3>Hình thức thanh toán</h3>
+    <h3>${icon('card')} Hình thức thanh toán</h3>
     <div class="seg">
-      <button class="${m === 'cash' ? 'active' : ''}" data-m="cash">Tiền mặt</button>
-      <button class="${m === 'transfer' ? 'active' : ''}" data-m="transfer">Chuyển khoản</button>
-      <button class="${m === 'mixed' ? 'active' : ''}" data-m="mixed">Kết hợp</button>
+      <button class="${m === 'cash' ? 'active' : ''}" data-m="cash" aria-pressed="${m === 'cash'}">${icon('cash')} Tiền mặt</button>
+      <button class="${m === 'transfer' ? 'active' : ''}" data-m="transfer" aria-pressed="${m === 'transfer'}">${icon('qr')} Chuyển khoản</button>
+      <button class="${m === 'mixed' ? 'active' : ''}" data-m="mixed" aria-pressed="${m === 'mixed'}">${icon('card')} Kết hợp</button>
     </div>
     ${m === 'cash' ? `
       <label class="field"><span>Khách đưa</span><input class="input money" id="received" inputmode="numeric" placeholder="Bỏ trống = đưa đủ" value="${draft.received ? num(draft.received) : ''}"></label>

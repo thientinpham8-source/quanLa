@@ -46,6 +46,9 @@
   --surface: #ffffff;
   --surface-2: #f1f4f8;
   --line: #dce3ed;
+  --line-strong: #c3cfdf;
+  --icon-stroke: 1.8;
+  --action-shadow: 0 3px 8px rgba(0, 102, 223, .16);
   --text: #172235;
   --muted: #5d6b80;
   --control-line: #aebccc;
@@ -100,7 +103,7 @@ button { cursor: pointer; border: 0; background: none; margin: 0; padding: 0; li
 button:disabled { cursor: not-allowed; opacity: .5; }
 img, svg { display: block; max-width: 100%; }
 img { height: auto; }
-svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: var(--icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
 :focus-visible { outline: 3px solid color-mix(in srgb, var(--brand) 45%, transparent); outline-offset: 2px; }
 ::selection { background: var(--brand-100); }
 

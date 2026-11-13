@@ -1,6 +1,10 @@
 /* Bố cục theo không gian nội dung; không scale toàn bộ giao diện. */
 .main:not(.flush) > * { max-width: var(--container-max); margin-inline: auto; }
-.settings-grid.settings-columns { grid-template-columns: minmax(0, 1fr); }
+.settings-grid.settings-columns { grid-template-columns: minmax(0, 1fr); align-items: start; }
+.settings-grid.settings-columns[data-section]:not([data-section="shop"]) { grid-template-columns: minmax(0, 1fr); max-width: 52rem; margin-inline: 0; }
+.settings-grid[data-section] .card > h3 { padding-bottom: var(--space-3); border-bottom: 1px solid var(--line); }
+.settings-grid[data-section] .card > h3 svg.i { color: var(--brand-700); }
+.settings-grid[data-section] .row-between { gap: var(--space-3); }
 .order-toolbar { position: sticky; top: 0; z-index: 15; background: var(--bg); }
 .order-toolbar .pane-head, .order-toolbar .menu-tools { position: static; }
 .order-toolbar .pane-head { padding-top: calc(var(--space-2) + var(--safe-t)); }
@@ -34,12 +38,18 @@
   .modal-h { padding-top: var(--space-4); }
   .tgrid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 10.5rem), 1fr)); }
 }
+@media (max-width: 899px) {
+  .pay-grid > .pay-side { grid-row: 1; }
+  .pay-grid > .pay-details { grid-row: 2; }
+}
 @media (min-width: 900px) {
   .shell.focus { height: 100dvh; }
   .shell.focus .main { min-height: 0; }
   .order-page { min-height: 0; height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) clamp(20rem, 30vw, 24rem); }
   .menu-pane { overflow: auto; height: 100%; }
-  .menu-tools { padding: var(--space-3) var(--space-4); }
+  .menu-tools { padding: var(--space-3) var(--space-4); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; }
+  .menu-tools .menu-page-nav { box-shadow: none; }
+  .menu-tools > .searchbox { min-width: 0; }
   .pane-head { padding-inline: var(--space-4); }
   .menu-list { padding: var(--space-2) var(--space-4) var(--space-6); }
   .cart-pane { position: static; transform: none; max-height: none; min-height: 0; height: 100%; border-radius: 0; box-shadow: none; border-left: 1px solid var(--line); transition: none; }
@@ -83,6 +93,9 @@
 @container workspace (min-width: 45rem) {
   .kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .settings-grid, .settings-grid.settings-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .report-secondary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .report-charts { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); }
+  .table-toolbar { align-items: center; }
 }
 @container workspace (max-width: 38rem) {
   .menu-admin-toolbar { align-items: stretch; flex-direction: column; }
@@ -100,7 +113,7 @@
   .top-actions { gap: var(--space-1); }
   .tc-name { font-size: var(--font-base); line-height: var(--line-base); }
   .tc-mid { font-size: var(--font-lg); line-height: var(--line-lg); }
-  .tc-bot { white-space: normal; text-align: center; }
+  .tc-bot { white-space: normal; text-align: left; }
   .admin-menu-card { block-size: auto; min-block-size: 0; overflow: visible; }
   .admin-menu-items { overflow: visible; }
   .admin-menu-card .card-h { flex-wrap: wrap; }
@@ -142,7 +155,9 @@
   .stat { padding-inline: var(--space-2); font-size: var(--font-xs); }
 }
 @media (pointer: coarse) {
-  .btn-sm, .chip, .chip-sm, .icon-btn.sm, .tc-act, .category-shortcut, .excel-tab, .adjust-toggle, .cl-note { min-height: var(--control-h); }
+  .btn-sm, .chip, .chip-sm, .icon-btn.sm, .tcard .tc-act, .category-shortcut, .excel-tab, .seg button, .adjust-toggle, .pay-page .adjust-percent, .cl-note { min-height: var(--control-h); }
+  .tcard .kitchen-ready-check { width: var(--control-h); height: var(--control-h); }
+  .tcard:has(.kitchen-ready-check) .tc-top { padding-right: var(--space-8); min-height: var(--control-h); }
   .icon-btn.sm, .qty button, .bill-qty button, .pay-items .bill-qty button, .cp-body .bill-qty button { width: var(--control-h); height: var(--control-h); }
   .qty span { min-width: var(--space-6); }
   .mitem .add, .mitem .sub, .menu-page-nav .icon-btn { width: var(--control-h); height: var(--control-h); }

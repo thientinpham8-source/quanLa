@@ -9,7 +9,7 @@ import { APP_VERSION } from './config.js?v=1.0.72';
 
 import login from './pages/login.js?v=1.0.59';
 import tables from './pages/tables.js?v=1.0.59';
-import order from './pages/order.js?v=1.0.59';
+import order from './pages/order.js?v=1.0.73';
 import orders from './pages/orders.js?v=1.0.68';
 import bill from './pages/cashier.js?v=1.0.71';
 import history from './pages/history.js?v=1.0.59';
@@ -35,6 +35,8 @@ const NAV = {
   ],
   kitchen: [['kitchen', 'Phiếu bếp', 'chef']],
 };
+const MOBILE_PRIMARY = new Set(['tables', 'orders', 'inventory', 'reports']);
+const navLink = ([key, label, glyph]) => `<a href="#/${key}" data-nav="${key}">${icon(glyph)}<span>${label}</span>${key === 'orders' || key === 'kitchen' ? `<b class="nav-badge" data-badge="${key}"></b>` : ''}</a>`;
 const ALLOWED = {
   order: ['tables', 'order', 'orders'],
   cashier: Object.keys(ROUTES).filter(route => route !== 'kitchen'),
@@ -77,11 +79,13 @@ function startClock() {
 
 function renderShell(role) {
   const nav = NAV[role];
+  const mobileNav = nav.length > 5 ? nav.filter(([key]) => MOBILE_PRIMARY.has(key)) : nav;
+  const hasMore = mobileNav.length < nav.length;
   const u = store.user;
   app.innerHTML = `<div class="shell" id="shell">
     <aside class="sidenav">
       <div class="brand">${logo()}<div><span class="shop-name">${esc(store.settings.shopName)}</span><small>${ROLE_NAME[role]}</small></div></div>
-      <nav>${nav.map(([k, l, i]) => `<a href="#/${k}" data-nav="${k}">${icon(i)}<span>${l}</span>${k === 'orders' ? '<b class="nav-badge" data-badge="orders"></b>' : k === 'kitchen' ? '<b class="nav-badge" data-badge="kitchen"></b>' : ''}</a>`).join('')}</nav>
+      <nav aria-label="Điều hướng chính">${nav.map(navLink).join('')}</nav>
       <div class="side-foot">
         <div class="side-clock">
           <div class="clock-time">${icon('clock')} <span id="clockTime">--:--:--</span></div>
@@ -101,7 +105,7 @@ function renderShell(role) {
       </div>
     </header>
     <main class="main" id="main"></main>
-    <nav class="bottomnav">${nav.map(([k, l, i]) => `<a href="#/${k}" data-nav="${k}">${icon(i)}<span>${l}</span>${k === 'orders' ? '<b class="nav-badge" data-badge="orders"></b>' : k === 'kitchen' ? '<b class="nav-badge" data-badge="kitchen"></b>' : ''}</a>`).join('')}</nav>
+    <nav class="bottomnav" aria-label="Điều hướng chính">${mobileNav.map(navLink).join('')}${hasMore ? `<button type="button" data-act="more-nav" aria-label="Mở các chức năng khác" aria-haspopup="dialog" aria-expanded="false">${icon('layers')}<span>Thêm</span></button>` : ''}</nav>
   </div>`;
   shellRole = role;
   startClock();
@@ -109,6 +113,38 @@ function renderShell(role) {
     const a = e.target.closest('[data-act]')?.dataset.act;
     if (a === 'logout') logout();
     if (a === 'user') userMenu();
+    if (a === 'more-nav') moreNavigation();
+  });
+}
+
+function moreNavigation() {
+  const trigger = document.querySelector('[data-act="more-nav"]');
+  const nav = NAV[store.user.role].filter(([key]) => !MOBILE_PRIMARY.has(key));
+  const { name } = parse();
+  trigger?.setAttribute('aria-expanded', 'true');
+  const menu = modal({
+    title: 'Chức năng khác',
+    body: `<nav class="mobile-menu" aria-label="Chức năng khác">${nav.map(navLink).join('')}</nav>`,
+    onMount: api => {
+      api.el.setAttribute('aria-label', 'Chức năng khác');
+      api.$$('[data-nav]').forEach(a => {
+        a.classList.toggle('active', a.dataset.nav === name);
+        if (a.dataset.nav === name) a.setAttribute('aria-current', 'page');
+        a.onclick = () => api.close();
+      });
+      const controls = api.$$('button, a[href]');
+      api.el.addEventListener('keydown', e => {
+        if (e.key !== 'Tab') return;
+        const first = controls[0], last = controls.at(-1);
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      });
+      api.$('.mobile-menu a')?.focus();
+    },
+  });
+  menu.result.then(() => {
+    trigger?.setAttribute('aria-expanded', 'false');
+    if (trigger?.isConnected) trigger.focus({ preventScroll: true });
   });
 }
 
@@ -145,7 +181,14 @@ async function route() {
   const main = document.getElementById('main');
   main.className = 'main' + (page.flush ? ' flush' : '');
   main.scrollTop = 0; window.scrollTo(0, 0);
-  shell.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('active', a.dataset.nav === name || (name === 'bill' && a.dataset.nav === 'orders') || (name === 'order' && a.dataset.nav === 'tables')));
+  const activeNav = name === 'bill' ? 'orders' : name === 'order' ? 'tables' : name;
+  shell.querySelectorAll('[data-nav]').forEach(a => {
+    const active = a.dataset.nav === activeNav;
+    a.classList.toggle('active', active);
+    if (active) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
+  });
+  shell.querySelector('[data-act="more-nav"]')?.classList.toggle('active', !MOBILE_PRIMARY.has(activeNav));
   current = { page, cleanup: await page.mount(main, params) };
   const waiting = Object.values(store.bills).filter(b => b.status === 'waiting').length;
   shell.querySelectorAll('[data-badge="orders"]').forEach(el => (el.textContent = waiting || ''));

@@ -63,10 +63,12 @@ function addToCart(menuId, delta = 1) {
 function skeleton() {
   el.innerHTML = `<div class="order-page ${soldMode ? 'soldmode' : ''}" id="op">
     <section class="menu-pane">
-      <div class="pane-head" id="head"></div>
-      <div class="menu-tools">
-        <div class="menu-page-nav" id="cats"></div>
-        <div class="searchbox">${icon('search')}<input class="input" id="q" type="search" placeholder="Tìm toàn bộ thực đơn…" value="${esc(q)}" autocomplete="off"></div>
+      <div class="order-toolbar">
+        <div class="pane-head" id="head"></div>
+        <div class="menu-tools">
+          <div class="menu-page-nav" id="cats"></div>
+          <div class="searchbox">${icon('search')}<input class="input" id="q" type="search" aria-label="Tìm món trong thực đơn" placeholder="Tìm toàn bộ thực đơn…" value="${esc(q)}" autocomplete="off"></div>
+        </div>
       </div>
       <div id="soldBanner"></div>
       <div class="menu-list" id="menuList"></div>
@@ -92,9 +94,10 @@ function renderCats() {
   const cats = el.querySelector('#cats');
   const list = store.categories;
   const nq = norm(q);
+  cats.classList.toggle('menu-search-state', !!nq);
   if (nq) {
     const count = store.menu.filter(m => norm(m.name).includes(nq)).length;
-    cats.innerHTML = `<div class="menu-page-nav menu-search-state">${icon('search')}<div class="menu-page-label"><small>TOÀN BỘ THỰC ĐƠN</small><b>${count} món phù hợp</b></div></div>`;
+    cats.innerHTML = `${icon('search')}<div class="menu-page-label"><small>TOÀN BỘ THỰC ĐƠN</small><b>${count} món phù hợp</b></div>`;
   } else {
     let index = list.findIndex(c => c.id === cat);
     if (index < 0 && list.length) { index = 0; cat = list[0].id; }

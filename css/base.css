@@ -22,9 +22,9 @@
   --font-2xl: 1.5rem;
   --line-2xl: 2rem;
 
-  --container-max: 82.5rem;
-  --gutter: clamp(var(--space-4), 3vw, var(--space-8));
-  --card-padding: var(--space-4);
+  --container-max: 90rem;
+  --gutter: clamp(var(--space-3), 2.2vw, var(--space-8));
+  --card-padding: clamp(var(--space-3), 1.4vw, var(--space-6));
   --card-gap: var(--space-3);
   --section-gap: var(--space-6);
   --border-width: 1px;
@@ -42,35 +42,45 @@
   --info: #2563eb;
   --info-50: #eaf1ff;
 
-  --bg: #f8faf9;
+  --bg: #f3f6fa;
   --surface: #ffffff;
-  --surface-2: #f5f6f7;
-  --line: #cbd5e1;
-  --text: #111827;
-  --muted: #6b7280;
+  --surface-2: #f1f4f8;
+  --line: #dce3ed;
+  --text: #172235;
+  --muted: #5d6b80;
+  --control-line: #aebccc;
+  --placeholder: #68768a;
+  --font-ui: .9375rem;
+  --control-h: 2.75rem;
+  --sidebar-w: clamp(13rem, 16.5vw, 15rem);
 
-  --radius-sm: .5rem;
-  --radius: .75rem;
-  --radius-lg: 1rem;
+  --radius-sm: .625rem;
+  --radius: .875rem;
+  --radius-lg: 1.125rem;
   --radius-pill: 999px;
   --shadow-sm: 0 1px 3px rgba(17, 24, 39, .045);
   --shadow: 0 4px 14px rgba(17, 24, 39, .07);
   --shadow-lg: 0 12px 32px rgba(17, 24, 39, .12);
 
-  --header-h: 3.5rem;
-  --nav-h: 3.875rem;
+  --header-h: 4.25rem;
+  --nav-h: 4.5rem;
+  --safe-t: env(safe-area-inset-top, 0px);
   --safe-b: env(safe-area-inset-bottom, 0px);
-  --font: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; scrollbar-color: var(--control-line) var(--surface-2); scrollbar-width: thin; }
+input, textarea { caret-color: var(--brand-600); }
+::placeholder { color: var(--placeholder); opacity: 1; }
+:where(.main, .modal-b, .menu-pane, .cp-body, .admin-menu-items, .excel-scroll) { scrollbar-color: var(--control-line) var(--surface-2); scrollbar-width: thin; }
+:where(.field, .grid-2 > *, .row > *, .row-between > *) { min-width: 0; }
 body {
   margin: 0;
   font-family: var(--font);
-  font-size: var(--font-sm);
-  line-height: var(--line-sm);
+  font-size: var(--font-ui);
+  line-height: 1.5;
   color: var(--text);
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
@@ -81,7 +91,7 @@ h1, h2, h3, h4, h5, h6, p, ul, ol, figure, blockquote { margin: 0; }
 ul, ol { padding: 0; list-style: none; }
 h1 { font-size: clamp(var(--font-xl), 3vw, var(--font-2xl)); line-height: var(--line-2xl); font-weight: 600; letter-spacing: -.25px; }
 h2 { font-size: clamp(var(--font-lg), 2.5vw, var(--font-xl)); line-height: var(--line-xl); font-weight: 600; letter-spacing: -.15px; }
-h3 { font-size: var(--font-base); line-height: var(--line-base); font-weight: 500; display: flex; align-items: center; gap: var(--space-2); }
+h3 { font-size: var(--font-base); line-height: var(--line-base); font-weight: 600; display: flex; align-items: center; gap: var(--space-2); }
 h4, h5, h6 { font-size: var(--font-sm); line-height: var(--line-sm); font-weight: 600; }
 h3 svg.i { width: 18px; height: 18px; color: var(--muted); }
 a { color: inherit; text-decoration: none; }
@@ -95,7 +105,7 @@ svg.i { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor;
 ::selection { background: var(--brand-100); }
 
 /* Refined type hierarchy and focus treatment */
-strong, b { font-weight: 500; letter-spacing: -.08px; }
+strong, b { font-weight: 600; letter-spacing: 0; }
 
 /* Tiện ích */
 .muted { color: var(--muted); }
